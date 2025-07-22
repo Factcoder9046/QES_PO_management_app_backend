@@ -1,0 +1,135 @@
+import {Response, NextFunction } from "express";
+import ErrorHandler from "../utils/errorHandler.js";
+
+import jwt from "jsonwebtoken";
+import { config } from "dotenv";
+import { CustomRequest} from "../middlewares/check.permission.middleware.js"
+import User from "../models/user.auth.model.js";
+
+
+config();
+
+interface JwtPayload {
+ user?: {
+    id: string;
+    userType: string;
+    isVerified: boolean;
+    username?: string;
+    permissions: { resource: string; actions: string[] }[];
+  };
+}
+
+interface CustomJwtPayload extends JwtPayload {
+  id: string;
+  email: string;
+  userType: string;
+  iat: number;
+  exp: number;
+}
+
+// export const adminVerify = (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   let token: string | undefined;
+//   if (req.headers.cookie) {
+//     token = req.headers.cookie.split("jwt=")[1];
+//   } else {
+//     throw new ErrorHandler(401, "No token provided");
+//   }
+//   if (!token) {
+//     throw new ErrorHandler(401, "No token provided");
+//   }
+//   try {
+//     const decoded = jwt.verify(
+//       token,
+//       process.env.JWT_SECRET as string
+//     ) as CustomJwtPayload ;
+//     const allowRole=["admin","subadmin"]
+//     if(!allowRole.includes(decoded.userType)){
+//       throw new ErrorHandler(403, 'Not authorized: Required role access denied');
+//     }
+//     req.user = {
+//       id: user._id.toString(),
+//       userType: user.userType,
+//       // isVerified: user.Isverified,
+//       permissions: [], // No permissions loaded here; adjust if needed
+//     }; 
+//     next();
+//   } catch (error) {
+//     console.error("Token verification error:", error);
+//     return res.status(401).json({
+//       success: false,
+//       message: "Invalid token",
+//     });
+//   }
+// };
+
+///// create a funcation to check throught this what kinds of permission and also check user verify througth admin or not
+
+
+
+
+export const adminVerify = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Extract token from cookie
+    let token: string | undefined;
+    if (req.headers.cookie) {
+      token = req.headers.cookie.split("jwt=")[1]?.split(";")[0]; // Safe parsing
+    }
+    if (!token) {
+      throw new ErrorHandler(401, "No token provided");
+    }
+    // Verify JWT token
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined");
+    }
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    ) as CustomJwtPayload;
+    // Fetch user data
+    const user = await User.findById(decoded.id)
+      .select("userType isVerified username")
+      .lean();
+    if (!user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+    const allowRole: string[] = ["admin", "subadmin"];
+    if (!allowRole.includes(decoded.userType)) {
+      throw new ErrorHandler(403, "Not authorized: Required role access denied");
+    }
+    req.user = {
+      id: user._id.toString(),
+      userType: user.userType,
+      username: user.username,
+      permissions: [],// Use JWT permissions or empty array
+    };
+    next();
+  } catch (error) {
+    console.error("Token verification error:", error);
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: Token has expired",
+      });
+    }
+    if (error instanceof ErrorHandler) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Invalid token",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
