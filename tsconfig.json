@@ -6,7 +6,7 @@
     "moduleResolution": "NodeNext", // Ensure this also matches "NodeNext"
     "esModuleInterop": true,
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": ".src/dist",
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "./",
