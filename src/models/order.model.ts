@@ -17,23 +17,32 @@ const orderSchema = new mongoose.Schema(
         remark: { type: String, required: false },
       },
     ],
-    estimatedDispatchDate: { type: Date },
+    estimatedDispatchDate: { type: Date, required:false },
     generatedBy: {
-      user: {
+      username:{type:String,required:false},
+      employeeId: { type: String, required: false },
+    },
+    
+    // orderThrougth: { type: String },
+    // department: { type: String, required: true },
+    // createdBy: {
+    //   userId: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "User",
+    //     required: false,
+    //   },
+    //   username: { type: String, required: false },
+    // },
+    orderThrough: {
+    type: new mongoose.Schema(
+      {
         username: { type: String, required: true },
+        employeeId: { type: String, required: true }
       },
-      employeeId: { type: String, required: true },
-    },
-    orderThrougth: { type: String },
-    department: { type: String, required: true },
-    createdBy: {
-      userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-      username: { type: String, required: true },
-    },
+      { _id: false }
+    ),
+    required: true
+  },
     status: {
       type: String,
       enum: ["pending", "processing", "completed", "delayed", "rejected"],

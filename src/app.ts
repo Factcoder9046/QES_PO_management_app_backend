@@ -24,7 +24,7 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: "./.env" });
 
 // export const envMode = process.env.NODE_ENV?.trim() || "DEVELOPMENT";
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 8080;
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/orderdb"; // Default local MongoDB
 if (!mongoURI.startsWith("mongodb://") && !mongoURI.startsWith("mongodb+srv://")) {
   console.error("Invalid MONGO_URI. Please set a valid MongoDB connection string.");
@@ -59,10 +59,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
 const allowedOrigins = [
-  "http://localhost:4000",
+  // "http://localhost:4000",
   "http://localhost:5173",
-  "http://13.233.137.149:4000",
-  "exp://o87i5p4-anonymous-8081.exp.direct"
+  // "http://13.233.137.149:4000",
+  // "exp://o87i5p4-anonymous-8081.exp.direct"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
@@ -107,8 +107,11 @@ app.get("*", (req, res) => {
 });
 
 
+
 app.use(errorMiddleware);
 
 server.listen(port, () =>
   console.log(`Server is working on Port: ${port} in  Mode.`)
 );
+
+// port

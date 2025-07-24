@@ -53,8 +53,9 @@ export const orderCreate = async (
       products,
       estimatedDispatchDate,
       generatedBy,
-      orderThrougth,
+      // orderThrougth,
       department,
+      orderThrough
     } = req.body;
     console.log(req.body,"shariq khan.......")
 
@@ -66,7 +67,8 @@ export const orderCreate = async (
       !zipCode ||
       !products ||
       !generatedBy ||
-      !generatedBy.employeeId ||
+      // !generatedBy.employeeId ||
+      !orderThrough ||
       !department ||
       !req.user ||
       !req.user.id ||
@@ -112,17 +114,19 @@ export const orderCreate = async (
       products,
       estimatedDispatchDate,
       generatedBy: {
-        user: {
-          username: req.user.username, // From authenticated user
-        },
+        username:generatedBy.username,
         employeeId: generatedBy.employeeId, // From request body
       },
-      orderThrougth,
+      // orderThrougth,
       department,
-      createdBy: {
-        userId: req.user.id,
-        username: req.user.username,
-      },
+      // createdBy: {
+      //   userId: req.user.id,
+      //   username: req.user.username,
+      // },
+      orderThrough:{
+        username:orderThrough.username,
+        employeeId:orderThrough.employeeId
+      }
     });
 
     const savedOrder = await newOrder.save();
