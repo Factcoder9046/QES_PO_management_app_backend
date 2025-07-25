@@ -4,9 +4,11 @@ import User from "../models/user.auth.model.js";
 import Order from "../models/order.model.js";
 import Permission from "../models/user.permission.model.js";
 
+
 import PermissionRequest from "../models/permissionRequest.js";
 import { Socket } from "socket.io";
 import { userSocketMap } from "../app.js";
+
 
 //// check if user has permission for the action
 export const hasPermission = async (
@@ -20,10 +22,13 @@ export const hasPermission = async (
     actions: action,
   });
 
+
   return !!permission;
 };
 
+
 //// create a notification order action
+
 
 export const createOrderNotification = async (
   orderId: string,
@@ -35,6 +40,7 @@ export const createOrderNotification = async (
   const session = await mongoose.startSession();
   session.startTransaction();
 
+
   // Map action to notification type
   const notificationActionMap = {
     create: "order_create",
@@ -42,9 +48,11 @@ export const createOrderNotification = async (
     delete: "order_delete",
   };
 
+
   try {
     const user = await User.findById(userId).session(session);
     if (!user) throw new Error("User not found");
+
 
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Order not found");
@@ -75,7 +83,9 @@ export const createOrderNotification = async (
       isRead: false,
     }));
 
+
     const message = `User ${user.username} ${action}d order #${order.orderNumber}`;
+
 
     const notification = new Notification({
       type: notificationActionMap[action],
@@ -86,7 +96,9 @@ export const createOrderNotification = async (
       referenceModel: "Order",
     });
 
+
     await notification.save({ session });
+
 
     recipients.forEach((recipient) => {
       const socketId = userSocketMap.get(recipient.userId.toString());
@@ -101,6 +113,7 @@ export const createOrderNotification = async (
       }
     });
 
+
     await session.commitTransaction();
     return notification;
   } catch (error) {
@@ -110,6 +123,7 @@ export const createOrderNotification = async (
     session.endSession();
   }
 };
+
 
 ///// create a notification for the permissionRequest action for the admin
 export const createPermissionRequestNotification = async (
@@ -122,9 +136,11 @@ export const createPermissionRequestNotification = async (
   const session = await mongoose.startSession();
   session.startTransaction();
 
+
   try {
     const user = await User.findById(userId).session(session);
     if (!user) throw new Error("User not found");
+
 
     const permissionRequest = new PermissionRequest({
       requester: {
@@ -137,7 +153,9 @@ export const createPermissionRequestNotification = async (
       status: "pending",
     });
 
+
     await permissionRequest.save({ session });
+
 
     // Notify admins or relevant users (e.g., users with permission to approve requests)
     const adminUsers = await User.find({ role: "admin" })
@@ -148,7 +166,9 @@ export const createPermissionRequestNotification = async (
       isRead: false,
     }));
 
+
     const message = `Permission request from ${user.username}: ${description}`;
+
 
     const notification = new Notification({
       type: "permission_request",
@@ -159,7 +179,9 @@ export const createPermissionRequestNotification = async (
       referenceModel: "PermissionRequest",
     });
 
+
     await notification.save({ session });
+
 
     // Emit notification to admin users
     recipients.forEach((recipient) => {
@@ -175,6 +197,7 @@ export const createPermissionRequestNotification = async (
       }
     });
 
+
     await session.commitTransaction();
     return permissionRequest;
   } catch (error) {
@@ -184,3 +207,6 @@ export const createPermissionRequestNotification = async (
     session.endSession();
   }
 };
+
+
+

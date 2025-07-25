@@ -123,7 +123,7 @@ export const assignPermissions = async (
     }
     // Validate resource and actions
     const validResources = ["users", "permissions", "orders"];
-    const validActions = ["read", "write", "update", "create"];
+    const validActions = ["readOnly", "create", "update", "delete"];
     if (!validResources.includes(resource)) {
       return res.status(400).json({
         success: false,
@@ -276,51 +276,72 @@ export const subAdminCreate = async (
       email,
       password,
       department,
-      userType = 'subadmin',
+      userType = "subadmin",
+      employeeId,
+      desgination
     } = req.body;
     // Validate required fields
     if (!username || !email || !password || !department) {
-      throw new ErrorHandler(400, 'Username, email, password, and department are required');
+      throw new ErrorHandler(
+        400,
+        "Username, email, password, and department are required"
+      );
+    }
+    // Process department string into a single valid department
+    let selectedDepartment;
+    if (typeof department === "string") {
+      const departmentArray = department.split(",").map((dep) => dep.trim());
+      selectedDepartment = departmentArray.find((dep) =>
+        ["sales", "production", "Accounts", "R&D"].includes(dep)
+      );
+    } else {
+      throw new ErrorHandler(400, "Department must be a string");
     }
     // Validate department
-    if (!['sales', 'production', 'Accounts', 'R&D'].includes(department)) {
-      throw new ErrorHandler(400, 'Invalid department');
+    if (!selectedDepartment) {
+      throw new ErrorHandler(400, "No valid department found in input");
     }
-
     // Check for existing username or email
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
-      throw new ErrorHandler(400, 'Username or email already exists');
+      throw new ErrorHandler(400, "Username or email already exists");
     }
+
 
     // Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create subadmin
     const user = await User.create({
       username,
       email,
       password: hashedPassword,
       userType,
-      department,
+      department: selectedDepartment,
       profilePicture: null,
+      employeeId,
+      desgination
     });
     res.status(201).json({
       success: true,
-      message: 'Subadmin created successfully',
+      message: "Subadmin created successfully",
       user: {
         id: user._id,
         username: user.username,
         email: user.email,
         userType: user.userType,
-        department: user.department,
+        department: selectedDepartment,
+        employeeId:user.employeeId,
+        desgination:user.desgination
       },
     });
   } catch (error) {
     next(error);
   }
 };
+
+
+
+
 
 
 ///// create function for the subadmin login

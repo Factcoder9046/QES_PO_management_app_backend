@@ -1,375 +1,3 @@
-// import { Request, Response, NextFunction } from "express";
-// import jwt from "jsonwebtoken";
-// import User from "../models/user.auth.model.js";
-// import Permission from "../models/user.permission.model.js";
-// import { config } from "dotenv";
-// import { createPermissionRequestNotification } from "../controllers/notificationService.js";
-// import PermissionRequest from "../models/permissionRequest.js";
-
-// config();
-
-// // Export CustomRequest
-// export interface CustomRequest extends Request {
-//   user?: {
-//     id: string;
-//     userType: string;
-//     username?: string; // Add username to match order.create.ts usage
-//     permissions: { resource: string; actions: string[] }[];
-//   };
-// }
-
-// interface CustomJwtPayload {
-//   id: string;
-//   email: string;
-//   userType: string;
-//   iat: number;
-//   exp: number;
-//   permissions?: { resource: string; actions: string[] }[];
-// }
-
-// export type UserType = "admin" | "subadmin" | "user"; // Matches your schema's enum
-
-// export interface AllowedTypes {
-//   roles: UserType[]; // Array of allowed user types
-// }
-
-// export const requirePermission = (resource: string, action: string) => {
-//   return async (req: CustomRequest, res: Response, next: NextFunction) => {
-//     try {
-//       // Extract token from cookie
-//       let token: string | undefined;
-//       if (req.headers.cookie) {
-//         token = req.headers.cookie.split("jwt=")[1]?.split(";")[0]; // Handle cookie parsing safely
-//       }
-//       if (!token) {
-//         return res.status(401).json({
-//           success: false,
-//           message: "No token provided",
-//         });
-//       }
-//       // Verify JWT token
-//       const decoded = jwt.verify(
-//         token,
-//         process.env.JWT_SECRET as string
-//       ) as CustomJwtPayload;
-//       const user = await User.findById(decoded.id)
-//         .select("userType Isverified username")
-//         .lean();
-//       if (!user) {
-//         return res.status(401).json({
-//           success: false,
-//           message: "User not found",
-//         });
-//       }
-//       const permissions = await Permission.find({ userId: decoded.id }).lean();
-//       req.user = {
-//         id: user._id.toString(),
-//         userType: user.userType,
-//         username: user.username,
-//         // isVerified: user.Isverified, // Fixed typo
-//         permissions: permissions.map((perm) => ({
-//           resource: perm.resource,
-//           actions: perm.actions,
-//         })),
-//       };
-//       const userPermissions = req.user.permissions || [];
-//       const resourcePermissions = userPermissions.find(
-//         (perm) => perm.resource === resource
-//       );
-//       // Check if the user has the required action for the resource
-//       if (
-//         !resourcePermissions ||
-//         !resourcePermissions.actions.includes(action)
-//       ) {
-//         return res.status(403).json({
-//           success: false,
-//           message: `Permission denied: ${action} on ${resource}`,
-//         });
-//       }
-//       next();
-//     } catch (error) {
-//       console.error("Permission check error:", error);
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal server error during permission check",
-//         error: (error as Error).message,
-//       });
-//     }
-//   };
-// };
-
-// //// check user authenticate or not create middleware
-// export const authenticateUser = async (
-//   req: CustomRequest,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     // Extract token from cookie
-//     let token: string | undefined;
-//     if (req.headers.cookie) {
-//       token = req.headers.cookie.split("jwt=")[1]?.split(";")[0]; // Handle cookie parsing safely
-//     }
-//     if (!token) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "No token provided",
-//       });
-//     }
-//     // Verify JWT token
-//     if (!process.env.JWT_SECRET) {
-//       throw new Error("JWT_SECRET is not defined");
-//     }
-//     const decoded = jwt.verify(
-//       token,
-//       process.env.JWT_SECRET
-//     ) as CustomJwtPayload;
-//     const user = await User.findById(decoded.id)
-//       .select("userType Isverified")
-//       .lean();
-//     if (!user) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: User not found",
-//       });
-//     }
-//     req.user = {
-//       id: user._id.toString(),
-//       userType: user.userType,
-//       // isVerified: user.Isverified,
-//       permissions: [], // No permissions loaded here; adjust if needed
-//     };
-//     next();
-//   } catch (error: unknown) {
-//     if (error) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: Token has expired",
-//       });
-//     }
-//     if (error instanceof Error) {
-//       console.error("Authentication error:", error.message);
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: Invalid token",
-//       });
-//     }
-//     // Fallback for non-Error objects
-//     console.error("Authentication error:", String(error));
-//     return res.status(401).json({
-//       success: false,
-//       message: "Unauthorized: Invalid token",
-//     });
-//   }
-// };
-
-
-
-// export const restrictTo = (allowedTypes: UserType[]) => {
-//   return (req: CustomRequest, res: Response, next: NextFunction) => {
-//     if (!req.user) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: Please log in",
-//       });
-//     }
-
-//     if (!allowedTypes.includes(req.user.userType as UserType)) {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Forbidden: You do not have access to this resource",
-//       });
-//     }
-//     next();
-//   };
-// };
-
-
-
-
-// export const restrictToVerifiedUser = (
-//   req: CustomRequest,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   if (!req.user) {
-//     return res.status(401).json({
-//       success: false,
-//       message: "Unauthorized: Please log in",
-//     });
-//   }
-//   if (req.user.userType !== "user") {
-//     return res.status(403).json({
-//       success: false,
-//       message: "Forbidden: Only verified users can access this resource",
-//     });
-//   }
-//   next();
-// };
-
-
-
-// export const requirePermissionForResource = async (
-//   req: CustomRequest,
-//   res: Response
-// ) => {
-//   try {
-//     const { resource, action, description } = req.body;
-//     const userId = req.user?.id;
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: User ID not found",
-//       });
-//     }
-//     // Check if the user has the required permission
-//     if (!["read", "write", "update", "create", "delete"].includes(action)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid action specified",
-//       });
-//     }
-//     if (!["users", "permissions", "orders"].includes(resource)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid resource specified",
-//       });
-//     }
-//     const io = req.app.get("io");
-//     // Fetch the user's username from the database
-//     const userDoc = await User.findById(userId).select("username").lean();
-//     const username = userDoc?.username || "unknown user";
-//     const permissionRequest = await createPermissionRequestNotification(
-//       userId,
-//       action as "read" | "write" | "update" | "create",
-//       description ||
-//         `Permission to ${action} ${resource} requested by ${username}`,
-//       io,
-//       resource as "orders" | "users" | "permissions"
-//     );
-//     return res.status(201).json({
-//       success: true,
-//       message: "Permission request created successfully",
-//       data: permissionRequest,
-//     });
-//   } catch (error) {
-//     console.error("Error in requirePermissionForResource:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error while processing permission request",
-//       error: (error as Error).message,
-//     });
-//   }
-// };
-
-
-
-
-// export const approvePermissionRequest = async (
-//   req: CustomRequest,
-//   res: Response
-// ) => {
-//   try {
-//     const { requestId, status } = req.body; // Expecting requestId and status in the request body
-//     const userId = req.user?.id;
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized: User ID not found",
-//       });
-//     }
-//     if (!["approved", "rejected"].includes(status)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid status specified",
-//       });
-//     }
-//     // Find the permission request by ID
-//     const permissionRequest = await PermissionRequest.findById(requestId);
-//     if (!permissionRequest) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Permission request not found",
-//       });
-//     }
-//     // Fetch the admin's username from the database
-//     const userDoc = await User.findById(userId).select("username").lean();
-//     const username = userDoc?.username || "Admin";
-//     const adminId = userDoc?._id;
-//     // Update the status and respondedBy fields
-//     permissionRequest.status = status;
-//     if (permissionRequest.status === status) {
-//       const { requester, resource, action } = permissionRequest;
-//       const permission = await Permission.findOne({
-//         userId: requester.userId,
-//         resource,
-//       });
-//       if (permission) {
-//         if (!permission.actions.includes(action)) {
-//           permission.actions.push(action);
-//           await permission.save();
-//         }
-//       } else {
-//         const newPermission = new Permission({
-//           userId: requester.userId,
-//           resource,
-//           actions: [action],
-//         });
-//         await newPermission.save();
-//       }
-//     }
-//     permissionRequest.respondedBy = {
-//       userId: adminId,
-//       username,
-//     };
-
-//     await permissionRequest.save();
-//     // Optionally, create a notification for the requester
-//     const io = req.app.get("io");
-//     if (!permissionRequest.requester || !permissionRequest.requester.userId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Permission request does not have a valid requester",
-//       });
-//     }
-//     await createPermissionRequestNotification(
-//       permissionRequest.requester.userId.toString(),
-//       status === "approved" ? "create" : "update",
-//       `Your permission request for ${permissionRequest.resource} has been ${status}`,
-//       io,
-//       permissionRequest.resource as "orders" | "users" | "permissions"
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: `Permission request ${status} successfully`,
-//       data: permissionRequest,
-//     });
-//   } catch (error) {
-//     console.error("Error approving permission request:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error while processing permission request",
-//       error: (error as Error).message,
-//     });
-//   }
-// };
-
-
-
-
-// // export interface CustomRequest extends Request {
-// //   user?: {
-// //     id: string;
-// //     userType: string;
-// //     isVerified: boolean;
-// //     username?: string;
-// //     permissions: { resource: string; actions: string[] }[];
-// //   };
-// // }
-
-
-
 
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -381,11 +9,14 @@ import { config } from "dotenv";
 import { createPermissionRequestNotification } from "../controllers/notificationService.js"; // Ensure this alias is configured in tsconfig.json
 import PermissionRequest from "../models/permissionRequest.js"; // Adjust path as per your project structure
 
+
 // Assuming you have a custom ErrorHandler class for consistent error responses
 // If not, you might need to remove its usage or define a simple one.
 // import ErrorHandler from "../utils/errorHandler"; // Uncomment if you have this utility
 
+
 config(); // Load environment variables from .env file
+
 
 // Extend Express Request interface to include the 'user' property
 export  interface CustomRequest extends Request {
@@ -403,6 +34,7 @@ export  interface CustomRequest extends Request {
   // };
 }
 
+
 // Define the structure of your JWT payload
 interface CustomJwtPayload extends jwt.JwtPayload {
   id: string; // The user ID stored in your JWT payload
@@ -414,8 +46,10 @@ interface CustomJwtPayload extends jwt.JwtPayload {
   permissions?: { resource: string; actions: string[] }[];
 }
 
+
 // Define allowed user types for restrictTo middleware
 export type UserType = "admin" | "subadmin" | "user"; // Matches your schema's enum
+
 
 // Middleware to check for specific resource permissions
 export const requirePermission = (resource: string, action: string) => {
@@ -423,11 +57,13 @@ export const requirePermission = (resource: string, action: string) => {
     try {
       let token: string | undefined;
 
+
       // 1. Prioritize extracting token from Authorization header (Bearer token)
       const authHeader = req.headers.authorization;
       if (authHeader && authHeader.startsWith("Bearer ")) {
         token = authHeader.split(" ")[1]; // Extract the token string after "Bearer "
       }
+
 
       // 2. Fallback: Check for token in cookie if not found in Authorization header
       //    This is for compatibility if some parts of your app still rely on cookies.
@@ -440,6 +76,7 @@ export const requirePermission = (resource: string, action: string) => {
         }
       }
 
+
       // If no token is found after checking both sources
       if (!token) {
         return res.status(401).json({
@@ -447,6 +84,7 @@ export const requirePermission = (resource: string, action: string) => {
           message: "Authentication token missing.", // More specific message
         });
       }
+
 
       // Verify JWT token using the secret from environment variables
       if (!process.env.JWT_SECRET) {
@@ -458,10 +96,12 @@ export const requirePermission = (resource: string, action: string) => {
         process.env.JWT_SECRET
       ) as CustomJwtPayload;
 
+
       // Fetch user details from the database using the ID from the decoded token
       const user = await User.findById(decoded.id)
         .select("userType Isverified username") // Select necessary fields
         .lean(); // Use .lean() for faster queries if you don't need Mongoose document methods
+
 
       // If user not found (e.g., deleted user, invalid ID in token)
       if (!user) {
@@ -471,8 +111,10 @@ export const requirePermission = (resource: string, action: string) => {
         });
       }
 
+
       // Fetch user-specific permissions from the database
       const permissions = await Permission.find({ userId: decoded.id }).lean();
+
 
       // Attach user and permissions data to the request object for subsequent middlewares/controllers
       req.user = {
@@ -486,11 +128,13 @@ export const requirePermission = (resource: string, action: string) => {
         })),
       };
 
+
       // Check if the user has the required action for the specified resource
       const userPermissions = req.user.permissions || [];
       const resourcePermissions = userPermissions.find(
         (perm) => perm.resource === resource
       );
+
 
       if (
         !resourcePermissions ||
@@ -502,9 +146,11 @@ export const requirePermission = (resource: string, action: string) => {
         });
       }
 
+
       next(); // Proceed to the next middleware or route handler
     } catch (error: any) {
       console.error("Authentication/Permission error in requirePermission:", error);
+
 
       // Handle specific JWT errors for more informative responses
       if (error.name === 'JsonWebTokenError') {
@@ -520,6 +166,7 @@ export const requirePermission = (resource: string, action: string) => {
         });
       }
 
+
       // Generic error for unexpected issues during authentication or permission check
       return res.status(500).json({
         success: false,
@@ -530,6 +177,7 @@ export const requirePermission = (resource: string, action: string) => {
   };
 };
 
+
 // Middleware to check if user is authenticated (without specific permissions)
 export const authenticateUser = async (
   req: CustomRequest,
@@ -539,11 +187,13 @@ export const authenticateUser = async (
   try {
     let token: string | undefined;
 
+
     // 1. Prioritize extracting token from Authorization header (Bearer token)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1];
     }
+
 
     // 2. Fallback: Check for token in cookie if not found in Authorization header
     if (!token && req.headers.cookie) {
@@ -553,6 +203,7 @@ export const authenticateUser = async (
         }
     }
 
+
     // If no token is found after checking both sources
     if (!token) {
       return res.status(401).json({
@@ -560,6 +211,7 @@ export const authenticateUser = async (
         message: "Unauthorized: No authentication token provided.",
       });
     }
+
 
     // Verify JWT token
     if (!process.env.JWT_SECRET) {
@@ -570,10 +222,12 @@ export const authenticateUser = async (
       process.env.JWT_SECRET
     ) as CustomJwtPayload;
 
+
     // Fetch user details from the database
     const user = await User.findById(decoded.id)
       .select("userType Isverified username") // Added 'username' here as well for consistency
       .lean();
+
 
     // If user not found
     if (!user) {
@@ -582,6 +236,7 @@ export const authenticateUser = async (
         message: "Unauthorized: User not found for provided token.",
       });
     }
+
 
     // Attach user data to the request object
     req.user = {
@@ -592,9 +247,11 @@ export const authenticateUser = async (
       permissions: [], // This middleware doesn't load permissions, so keep it empty or adjust if needed
     };
 
+
     next(); // Proceed to the next middleware or route handler
   } catch (error: any) { // Catch block should handle specific JWT errors
     console.error("Authentication error in authenticateUser:", error);
+
 
     // Handle specific JWT errors for more informative responses
     if (error.name === 'JsonWebTokenError') {
@@ -610,6 +267,7 @@ export const authenticateUser = async (
       });
     }
 
+
     // Generic error for unexpected issues
     return res.status(500).json({ // Changed from 401 to 500 for unexpected errors
       success: false,
@@ -618,6 +276,7 @@ export const authenticateUser = async (
     });
   }
 };
+
 
 // Middleware to restrict access based on user type/role
 export const restrictTo = (allowedTypes: UserType[]) => {
@@ -630,6 +289,7 @@ export const restrictTo = (allowedTypes: UserType[]) => {
       });
     }
 
+
     // Check if the user's type is among the allowed types
     if (!allowedTypes.includes(req.user.userType as UserType)) {
       return res.status(403).json({
@@ -640,6 +300,7 @@ export const restrictTo = (allowedTypes: UserType[]) => {
     next();
   };
 };
+
 
 // Middleware to restrict access only to verified users (specifically 'user' type)
 export const restrictToVerifiedUser = (
@@ -665,6 +326,7 @@ export const restrictToVerifiedUser = (
   next();
 };
 
+
 // Controller to handle permission requests (e.g., user requesting more permissions)
 export const requirePermissionForResource = async (
   req: CustomRequest,
@@ -680,7 +342,7 @@ export const requirePermissionForResource = async (
       });
     }
     // Validate action type
-    if (!["read", "write", "update", "create", "delete"].includes(action)) {
+    if (!["readonly", "write", "update", "create", "delete"].includes(action)) {
       return res.status(400).json({
         success: false,
         message: "Invalid action specified.",
@@ -694,11 +356,14 @@ export const requirePermissionForResource = async (
       });
     }
 
+
     const io = req.app.get("io"); // Get Socket.IO instance from app locals
+
 
     // Fetch the user's username from the database for notification message
     const userDoc = await User.findById(userId).select("username").lean();
     const username = userDoc?.username || "unknown user";
+
 
     // Create a permission request notification
     const permissionRequest = await createPermissionRequestNotification(
@@ -709,6 +374,7 @@ export const requirePermissionForResource = async (
       io,
       resource as "orders" | "users" | "permissions"
     );
+
 
     return res.status(201).json({
       success: true,
@@ -725,6 +391,13 @@ export const requirePermissionForResource = async (
   }
 };
 
+
+
+
+
+
+
+
 // Controller for admin to approve or reject permission requests
 export const approvePermissionRequest = async (
   req: CustomRequest,
@@ -733,6 +406,7 @@ export const approvePermissionRequest = async (
   try {
     const { requestId, status } = req.body; // Expecting requestId and status in the request body
     const userId = req.user?.id; // Get admin's userId from authenticated user
+
 
     if (!userId) {
       return res.status(401).json({
@@ -748,6 +422,7 @@ export const approvePermissionRequest = async (
       });
     }
 
+
     // Find the permission request by ID
     const permissionRequest = await PermissionRequest.findById(requestId);
     if (!permissionRequest) {
@@ -757,10 +432,12 @@ export const approvePermissionRequest = async (
       });
     }
 
+
     // Fetch the admin's username from the database
     const userDoc = await User.findById(userId).select("username").lean();
     const username = userDoc?.username || "Admin";
     const adminId = userDoc?._id; // Get admin's _id
+
 
     // Update the status and respondedBy fields of the permission request
     permissionRequest.status = status;
@@ -769,8 +446,10 @@ export const approvePermissionRequest = async (
       username,
     };
 
+
     // Declare permission variable outside the if/else block
-    let permission; 
+    let permission;
+
 
     // If approved, update or create the user's permissions
     if (status === "approved") {
@@ -779,6 +458,7 @@ export const approvePermissionRequest = async (
         userId: requester.userId,
         resource,
       });
+
 
       if (permission) {
         // If permission for resource exists, add action if not already present
@@ -798,8 +478,9 @@ export const approvePermissionRequest = async (
         await permission.save();
       }
     }
-    
+   
     await permissionRequest.save(); // Save the updated permission request
+
 
     // Optionally, create a notification for the requester
     const io = req.app.get("io");
@@ -810,6 +491,7 @@ export const approvePermissionRequest = async (
       });
     }
 
+
     await createPermissionRequestNotification(
       permissionRequest.requester.userId.toString(),
       status === "approved" ? "create" : "update", // Action for notification
@@ -817,6 +499,7 @@ export const approvePermissionRequest = async (
       io,
       permissionRequest.resource as "orders" | "users" | "permissions"
     );
+
 
     return res.status(200).json({
       success: true,
@@ -832,6 +515,28 @@ export const approvePermissionRequest = async (
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,5 +1,6 @@
 import mongoose from "mongoose"
 
+
 const permissionSchema = new mongoose.Schema(
   {
     userId: {
@@ -11,13 +12,13 @@ const permissionSchema = new mongoose.Schema(
     resource: {
       type: String,
       required: [true, "Resource is required"],
-      enum: ["users", "permissions", "orders"], 
+      enum: ["users", "permissions", "orders"],
       trim: true,
     },
     actions: {
       type: [String],
       required: [true, "Actions are required"],
-     enum: ["read", "write", "update", "create", "delete"],
+     enum: ["readOnly", "write", "update", "create", "delete"],
       validate: {
         validator: (arr: string[]) => arr.length > 0,
         message: "At least one action is required",
@@ -29,7 +30,13 @@ const permissionSchema = new mongoose.Schema(
   }
 );
 
+
 const Permission = mongoose.model("Permission", permissionSchema);
 
+
 export default Permission
+
+
+
+
 
