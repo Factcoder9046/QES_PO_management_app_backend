@@ -59,10 +59,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
 const allowedOrigins = [
-  // "http://localhost:4000",
+  "http://localhost:4000",
   "http://localhost:5173",
-  // "http://13.233.137.149:4000",
-  // "exp://o87i5p4-anonymous-8081.exp.direct"
+  "http://13.233.137.149:4000",
+  "exp://o87i5p4-anonymous-8081.exp.direct"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
