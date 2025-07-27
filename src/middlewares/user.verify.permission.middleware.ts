@@ -1,16 +1,15 @@
-import {Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import ErrorHandler from "../utils/errorHandler.js";
 
 import jwt from "jsonwebtoken";
 import { config } from "dotenv";
-import { CustomRequest} from "../middlewares/check.permission.middleware.js"
+import { CustomRequest } from "../middlewares/check.permission.middleware.js";
 import User from "../models/user.auth.model.js";
-
 
 config();
 
 interface JwtPayload {
- user?: {
+  user?: {
     id: string;
     userType: string;
     isVerified: boolean;
@@ -55,7 +54,7 @@ interface CustomJwtPayload extends JwtPayload {
 //       userType: user.userType,
 //       // isVerified: user.Isverified,
 //       permissions: [], // No permissions loaded here; adjust if needed
-//     }; 
+//     };
 //     next();
 //   } catch (error) {
 //     console.error("Token verification error:", error);
@@ -68,9 +67,6 @@ interface CustomJwtPayload extends JwtPayload {
 
 ///// create a funcation to check throught this what kinds of permission and also check user verify througth admin or not
 
-
-
-
 export const adminVerify = async (
   req: CustomRequest,
   res: Response,
@@ -79,9 +75,20 @@ export const adminVerify = async (
   try {
     // Extract token from cookie
     let token: string | undefined;
-    if (req.headers.cookie) {
+
+    // 1. Check Authorization header
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    // 2. Fallback: Check cookie
+    else if (req.headers.cookie) {
       token = req.headers.cookie.split("jwt=")[1]?.split(";")[0]; // Safe parsing
     }
+
     if (!token) {
       throw new ErrorHandler(401, "No token provided");
     }
@@ -102,13 +109,16 @@ export const adminVerify = async (
     }
     const allowRole: string[] = ["admin", "subadmin"];
     if (!allowRole.includes(decoded.userType)) {
-      throw new ErrorHandler(403, "Not authorized: Required role access denied");
+      throw new ErrorHandler(
+        403,
+        "Not authorized: Required role access denied"
+      );
     }
     req.user = {
       id: user._id.toString(),
       userType: user.userType,
       username: user.username,
-      permissions: [],// Use JWT permissions or empty array
+      permissions: [], // Use JWT permissions or empty array
     };
     next();
   } catch (error) {
@@ -132,4 +142,3 @@ export const adminVerify = async (
     });
   }
 };
-
