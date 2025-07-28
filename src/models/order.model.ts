@@ -4,11 +4,11 @@ const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, required: true, unique: true },
     clientName: { type: String, required: true },
-    companyName: { type: String },
-    gstNumber: { type: String },
-    contact: { type: String, required: true },
-    address: { type: String, required: true },
-    zipCode: { type: String, required: true },
+    companyName: { type: String,required: false },
+    gstNumber: { type: String,required: false },
+    contact: { type: String, required: false },
+    address: { type: String, required: false },
+    zipCode: { type: String, required: false },
     products: [
       {
         name: { type: String, required: true },
@@ -36,12 +36,12 @@ const orderSchema = new mongoose.Schema(
     orderThrough: {
     type: new mongoose.Schema(
       {
-        username: { type: String, required: true },
-        employeeId: { type: String, required: true }
+        username: { type: String, required: false },
+        employeeId: { type: String, required: false }
       },
       { _id: false }
     ),
-    required: true
+    required: false
   },
     status: {
       type: String,

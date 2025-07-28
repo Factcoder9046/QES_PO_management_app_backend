@@ -32,6 +32,10 @@ if (!mongoURI.startsWith("mongodb://") && !mongoURI.startsWith("mongodb+srv://")
 }
 // const mongoURI = process.env.MONGO_URI || "";
 
+const mongoTestURI = process.env.MONGO_TEST_URI || "mongodb://localhost:27017/testdb"; // Default local MongoDB for testing
+// console.log("Mongo Test URI : ",mongoTestURI)
+
+
 const connectDB = () =>
   mongoose
     .connect(mongoURI)
