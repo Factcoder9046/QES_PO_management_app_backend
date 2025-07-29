@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from "express";
 import Order from "../models/order.model.js";
@@ -6,7 +7,7 @@ import { FilterQuery } from "mongoose";
 import ErrorHandler from "../utils/errorHandler.js";
 // import User from "../models/user.auth.model";
 import { createOrderNotification } from "./notificationService.js";
-import {CustomRequest }  from "../middlewares/check.permission.middleware.js"
+import { CustomRequest } from "../middlewares/check.permission.middleware.js";
 
 
 // Function to generate orderNumber in format "01/QESPL/JUN/25"
@@ -18,6 +19,7 @@ export const createOrderNumber = async (
     .toLocaleString("default", { month: "short" })
     .toUpperCase();
   const yearShort = year.toString().slice(-2);
+
 
   // Get the next sequence number for the current month
   const prefix = `QESPL/${monthName}/${yearShort}`;
@@ -32,12 +34,14 @@ export const createOrderNumber = async (
     sequence = lastSequence + 1;
   }
 
+
   const orderNumber = `${String(sequence).padStart(2, "0")}/${prefix}`;
   return orderNumber;
 };
 
+
 export const orderCreate = async (
-  req: CustomRequest ,
+  req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -53,29 +57,24 @@ export const orderCreate = async (
       products,
       estimatedDispatchDate,
       generatedBy,
-      // orderThrougth,
-      department,
-      orderThrough
-    } = req.body;
-    console.log(req.body,"shariq khan.......")
-
-    // Basic required field validation
+      orderThrough,
+    } = req.body
     if (
       !clientName ||
-      !contact ||
-      !address ||
-      !zipCode ||
-      !products ||
+      // !contact ||
+      // !address ||
+      // !zipCode ||
+      // !products ||
       !generatedBy ||
-      // !generatedBy.employeeId ||
-      !orderThrough ||
-      !department ||
+      // !orderThrough ||
       !req.user ||
       !req.user.id ||
       !req.user.username
     ) {
+      console.log(req.body,"chek user......")
       throw new ErrorHandler(400, "Missing or invalid required fields");
     }
+
 
     // Validate products array
     if (!Array.isArray(products) || products.length === 0) {
@@ -98,10 +97,8 @@ export const orderCreate = async (
         });
       }
     }
-
     // Generate order number if not provided
     const orderNumber = providedOrderNumber || (await createOrderNumber());
-
     // Create and save the order
     const newOrder = new Order({
       orderNumber,
@@ -114,23 +111,16 @@ export const orderCreate = async (
       products,
       estimatedDispatchDate,
       generatedBy: {
-        username:generatedBy.username,
+        username: generatedBy.username,
         employeeId: generatedBy.employeeId, // From request body
       },
-      // orderThrougth,
-      department,
-      // createdBy: {
-      //   userId: req.user.id,
-      //   username: req.user.username,
-      // },
-      orderThrough:{
-        username:orderThrough.username,
-        employeeId:orderThrough.employeeId
-      }
+      orderThrough: {
+        username: orderThrough.username,
+        employeeId: orderThrough.employeeId, // From request body
+      },
+     
     });
-
     const savedOrder = await newOrder.save();
-
     // Notification logic
     const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
     const userId = req.user.id;
@@ -142,7 +132,6 @@ export const orderCreate = async (
       userSocketMap,
       "create"
     );
-
     return res.status(201).json({
       success: true,
       message: "Order created successfully",
@@ -153,6 +142,7 @@ export const orderCreate = async (
     next(error);
   }
 };
+
 
 export const getOrderDetailsById = async (
   req: Request,
@@ -177,6 +167,7 @@ export const getOrderDetailsById = async (
     next(error);
   }
 };
+
 
 export const getAllOrders = async (
   req: Request,
@@ -218,11 +209,14 @@ export const getAllOrders = async (
   }
 };
 
+
 ///// create function for the softdelete
+
 
 export const deleteOrder = async (req: CustomRequest, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(req.params,"nnef")
     const { isSoftdelete = false, permanent = false } = req.body;
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
@@ -254,41 +248,79 @@ export const deleteOrder = async (req: CustomRequest, res: Response) => {
   }
 };
 
+
 //// create a funcations for the restoreOrder
 export const restoreOrder = async (req: CustomRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const { ids } = req.body;
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
     }
-    const order = await Order.findById(id);
-    if (!order) {
-      throw new ErrorHandler(404, "Order not found");
+    // Handle single order restore
+    if (id) {
+      const order = await Order.findById(id);
+      if (!order) {
+        throw new ErrorHandler(404, "Order not found");
+      }
+      if (!order.isdeleted) {
+        throw new ErrorHandler(400, "Order is not in Recycle Bin");
+      }
+      order.isdeleted = false;
+      order.deletedAt = null;
+      await order.save();
+      return res.status(200).json({
+        success: true,
+        message: "Order restored successfully",
+      });
     }
-    if (!order.isdeleted) {
-      throw new ErrorHandler(400, "Order is not in Recycle Bin");
+    // Handle multiple order restore
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Verify all orders exist and are in recycle bin
+      const orders = await Order.find({
+        _id: { $in: ids },
+        isdeleted: true,
+      });
+      if (orders.length !== ids.length) {
+        throw new ErrorHandler(
+          404,
+          "One or more orders not found or not in Recycle Bin"
+        );
+      }
+      // Restore orders
+      const result = await Order.updateMany(
+        { _id: { $in: ids }, isdeleted: true },
+        { $set: { isdeleted: false, deletedAt: null } }
+      );
+      if (result.modifiedCount === 0) {
+        throw new ErrorHandler(500, "Failed to restore orders");
+      }
+      if (result.modifiedCount === 0) {
+        throw new ErrorHandler(500, "Failed to restore orders");
+      }
+      return res.status(200).json({
+        success: true,
+        message: `${result.modifiedCount} order(s) restored successfully`,
+      });
     }
-    order.isdeleted = false;
-    order.deletedAt = null;
-    await order.save();
-    return res.status(200).json({
-      success: true,
-      message: "Order restored successfully",
-    });
   } catch (error) {
     console.error(error);
     throw new ErrorHandler(500, "Internal server error");
   }
 };
 
+
 //// create funcation for the get order form the recycleBin
-export const getRecycleBinOrders = async (req: CustomRequest, res: Response) => {
+export const getRecycleBinOrders = async (
+  req: CustomRequest,
+  res: Response
+) => {
   try {
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
     }
     const orders = await Order.find({
-      isdeleted: false,
+      isdeleted: true,
     });
     if (orders.length === 0) {
       return res.status(200).json({
@@ -308,6 +340,7 @@ export const getRecycleBinOrders = async (req: CustomRequest, res: Response) => 
     throw new ErrorHandler(500, "Internal server error");
   }
 };
+
 
 ///// create a function update order details by ID
 export const updateOrderDetailsById = async (
@@ -414,6 +447,7 @@ export const updateOrderDetailsById = async (
       );
     }
 
+
     // Return the updated order
     return res.status(200).json({
       success: true,
@@ -425,6 +459,7 @@ export const updateOrderDetailsById = async (
   }
 };
 
+
 /// create funcation for the searching base on this parameters like clientName, companyName,  products.name, generatedBy.name
 export const searchOrders = async (
   req: Request,
@@ -433,57 +468,55 @@ export const searchOrders = async (
 ) => {
   try {
     const { query, startDate, endDate, status } = req.query;
-    console.log(startDate, endDate,"jhgdsgdsf")
+    console.log(startDate, endDate, "jhgdsgdsf");
     const searchQuery: FilterQuery<typeof Order> = {};
-    if (query && typeof query === 'string') {
-      const regex = { $regex: new RegExp(query, 'i') }; // Case-insensitive regex
+    if (query && typeof query === "string") {
+      const regex = { $regex: new RegExp(query, "i") }; // Case-insensitive regex
       searchQuery.$or = [
         { clientName: regex },
         { companyName: regex },
-        { 'products.name': regex },
-        { 'generatedBy.name': regex },
+        { "products.name": regex },
+        { "generatedBy.name": regex },
         { orderNumber: regex },
       ];
     }
     // Filter by date range (createdAt)
-    if(startDate|| endDate){
-      searchQuery.createdAt = {}
-      if(startDate && typeof startDate==="string"){
-        searchQuery.createdAt.$gte = new Date(startDate).setHours(0,0,0,0)
+    if (startDate || endDate) {
+      searchQuery.createdAt = {};
+      if (startDate && typeof startDate === "string") {
+        searchQuery.createdAt.$gte = new Date(startDate).setHours(0, 0, 0, 0);
       }
-      if(endDate && typeof endDate==="string"){
-        searchQuery.createdAt.$lte = new Date(endDate).setHours(23,59,59)
+      if (endDate && typeof endDate === "string") {
+        searchQuery.createdAt.$lte = new Date(endDate).setHours(23, 59, 59);
       }
     }
-    if (endDate && typeof endDate === 'string') {
+    if (endDate && typeof endDate === "string") {
       searchQuery.createdAt = {
         ...searchQuery.createdAt,
         $lte: new Date(endDate).setHours(23, 59, 59, 999), // End of the day
       };
     }
     // Filter by status
-    if (status && typeof status === 'string') {
+    if (status && typeof status === "string") {
       searchQuery.status = status;
     }
     // Exclude deleted orders
     // searchQuery.isdeleted = false;
     const orders = await Order.find(searchQuery)
-      .select('orderNumber clientName companyName products generatedBy status createdAt')
+      .select(
+        "orderNumber clientName companyName products generatedBy status createdAt"
+      )
       .sort({ createdAt: -1 });
-    console.log(orders,"jdsfusf")
+    console.log(orders, "jdsfusf");
     return res.status(200).json({
       success: true,
-      message: 'Orders retrieved successfully',
+      message: "Orders retrieved successfully",
       data: orders,
     });
   } catch (error) {
     next(error);
   }
 };
-
-
-
-
 
 
 

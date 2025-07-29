@@ -50,7 +50,7 @@ export const adminLogin = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password, userType } = req.body;
+    const { email, password, userType,employeeId,profilePicture } = req.body;
     // Validate input
     if (!email || !password) {
       throw new ErrorHandler(400, "Email and password are required");
@@ -95,6 +95,8 @@ export const adminLogin = async (
         email: user.email,
         userType: user.userType,
         username: user.username,
+        employeeId: user.employeeId,
+        profilePicture: user.profilePicture,
       },
     });
   } catch (error) {

@@ -14,9 +14,6 @@ import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import mongoose from "mongoose";
 
-
-
-
 // Resolve __filename and __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,16 +23,18 @@ dotenv.config({ path: "./.env" });
 // export const envMode = process.env.NODE_ENV?.trim() || "DEVELOPMENT";
 const port = process.env.PORT || 8080;
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/orderdb"; // Default local MongoDB
-if (!mongoURI.startsWith("mongodb://") && !mongoURI.startsWith("mongodb+srv://")) {
-  console.error("Invalid MONGO_URI. Please set a valid MongoDB connection string.");
+if (
+  !mongoURI.startsWith("mongodb://") &&
+  !mongoURI.startsWith("mongodb+srv://")
+) {
+  console.error(
+    "Invalid MONGO_URI. Please set a valid MongoDB connection string."
+  );
   process.exit(1);
 }
 // const mongoURI = process.env.MONGO_URI || "";
 
-const mongoTestURI = process.env.MONGO_TEST_URI || "mongodb://localhost:27017/testdb"; // Default local MongoDB for testing
-// console.log("Mongo Test URI : ",mongoTestURI)
-
-
+// const mongoTestURI = process.env.MONGO_TEST_URI || "mongodb://localhost:27017/testdb"; // Default local MongoDB for testing
 const connectDB = () =>
   mongoose
     .connect(mongoURI)
@@ -67,7 +66,6 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://13.233.137.149:4000",
   "exp://o87i5p4-anonymous-8081.exp.direct",
-  "https://qespl-frontend.vercel.app"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
@@ -111,13 +109,8 @@ app.get("*", (req, res) => {
   });
 });
 
-app.get('/',(req,res)=>{
-  res.send('QESPL Backend is LIVE')
-})
-
 app.use(errorMiddleware);
 
 server.listen(port, () =>
   console.log(`Server is working on Port: ${port} in  Mode.`)
 );
-

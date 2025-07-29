@@ -7,6 +7,7 @@ import { Application } from "express";
 
 // Store userId to socketId mappings
 const userSocketMap = new Map<string, string>();
+console.log(userSocketMap, "userSocketMap initialized");
 
 // Initialize Socket.IO server
 export const initializeWebSocket = (server: HttpServer, app: Application) => {
@@ -15,9 +16,11 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
       origin: (origin, callback) => {
         const allowedOrigins = [
           "exp://o87i5p4-anonymous-8081.exp.direct",
-          "http://localhost:5173",
+          "http://localhost:5173/",
+          "http://13.201.188.234:4000",
         ];
         if (process.env.CORS_ORIGIN) {
+          console.log("CORS_ORIGIN from env:", process.env.CORS_ORIGIN);
           const envOrigins = process.env.CORS_ORIGIN.split(",").map((origin) =>
             origin.trim().replace(/\/$/, "")
           );
@@ -40,10 +43,13 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
 
   // WebSocket connection handling
   io.on("connection", async (socket) => {
-    console.log("Client connected:", socket.id);
+    console.log("New WebSocket connection:", socket.id);
 
     // Get JWT token from query or headers
+    console.log("Socket handshake query:", socket.handshake.query, "socket.handshake.headers:", socket);
     const token = socket.handshake.query.token as string;
+    console.log("JWT Token:", token);
+
     if (!token) {
       console.log("No token provided, disconnecting:", socket.id);
       socket.disconnect();
@@ -78,10 +84,12 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
 
       // Join a room for the user
       socket.join(`user:${userId}`);
+      console.log(`User ${user.email} joined room: user:${userId}`);
 
       // Join admin room if user is an admin
       if (user.userType === "admin") {
         socket.join("admins");
+        console.log(`Admin user ${user.email} joined room: admins`);
       }
 
       // Handle disconnection
@@ -92,6 +100,7 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
         if (user.userType === "admin") {
           socket.leave("admins");
         }
+        console.log(`User ${userId} and socket ${socket.id} cleaned up.`);
       });
     } catch (error) {
       console.error("JWT verification error:", error);
