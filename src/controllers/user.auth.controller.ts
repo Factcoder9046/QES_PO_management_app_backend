@@ -74,7 +74,7 @@ export const adminLogin = async (
     const token = jwt.sign(
       { id: user._id, email, userType: user.userType },
       process.env.JWT_SECRET as string,
-      { expiresIn: "1h" } // Changed to 1 hour
+      { expiresIn: "5d" } // Changed to 5 days
     );
 
     // Set JWT in a cookie
@@ -82,7 +82,7 @@ export const adminLogin = async (
       httpOnly: true, // Prevents client-side JavaScript access
       secure: process.env.NODE_ENV === "production", // Use secure cookies in production
       sameSite: "strict", // Mitigates CSRF attacks
-      maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds, matching token expiration
+      maxAge: 5 * 24 * 60 * 60 * 1000, // 5 days in ms
     });
 
     // Send success response

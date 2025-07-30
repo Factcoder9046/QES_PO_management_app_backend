@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from "express";
 import Order from "../models/order.model.js";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { FilterQuery } from "mongoose";
 import ErrorHandler from "../utils/errorHandler.js";
 // import User from "../models/user.auth.model";
@@ -213,133 +213,133 @@ export const getAllOrders = async (
 ///// create function for the softdelete
 
 
-export const deleteOrder = async (req: CustomRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    console.log(req.params,"nnef")
-    const { isSoftdelete = false, permanent = false } = req.body;
-    if (!req.user) {
-      throw new ErrorHandler(401, "Unauthorized: User not found");
-    }
-    const order = await Order.findById(id);
-    if (!order) {
-      throw new ErrorHandler(404, "Order not found");
-    }
-    if (!isSoftdelete && !permanent) {
-      order.isdeleted = true;
-      order.deletedAt = new Date();
-      await order.save();
-      return res.status(200).json({
-        success: true,
-        message: "Order move to Recycle Bin Successfully",
-      });
-    } else if (permanent) {
-      await Order.deleteOne({ _id: id });
-      return res.status(200).json({
-        success: true,
-        message: "Order permanently deleted successfully",
-      });
-    } else {
-      throw new ErrorHandler(400, "Invalid deletion request");
-    }
-  } catch (error) {
-    console.log(error);
-    throw new ErrorHandler(500, "Internal server error");
-  }
-};
+// export const deleteOrder = async (req: CustomRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     console.log(req.params,"nnef")
+//     const { isSoftdelete = false, permanent = false } = req.body;
+//     if (!req.user) {
+//       throw new ErrorHandler(401, "Unauthorized: User not found");
+//     }
+//     const order = await Order.findById(id);
+//     if (!order) {
+//       throw new ErrorHandler(404, "Order not found");
+//     }
+//     if (!isSoftdelete && !permanent) {
+//       order.isdeleted = true;
+//       order.deletedAt = new Date();
+//       await order.save();
+//       return res.status(200).json({
+//         success: true,
+//         message: "Order move to Recycle Bin Successfully",
+//       });
+//     } else if (permanent) {
+//       await Order.deleteOne({ _id: id });
+//       return res.status(200).json({
+//         success: true,
+//         message: "Order permanently deleted successfully",
+//       });
+//     } else {
+//       throw new ErrorHandler(400, "Invalid deletion request");
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     throw new ErrorHandler(500, "Internal server error");
+//   }
+// };
 
 
 //// create a funcations for the restoreOrder
-export const restoreOrder = async (req: CustomRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { ids } = req.body;
-    if (!req.user) {
-      throw new ErrorHandler(401, "Unauthorized: User not found");
-    }
-    // Handle single order restore
-    if (id) {
-      const order = await Order.findById(id);
-      if (!order) {
-        throw new ErrorHandler(404, "Order not found");
-      }
-      if (!order.isdeleted) {
-        throw new ErrorHandler(400, "Order is not in Recycle Bin");
-      }
-      order.isdeleted = false;
-      order.deletedAt = null;
-      await order.save();
-      return res.status(200).json({
-        success: true,
-        message: "Order restored successfully",
-      });
-    }
-    // Handle multiple order restore
-    if (ids && Array.isArray(ids) && ids.length > 0) {
-      // Verify all orders exist and are in recycle bin
-      const orders = await Order.find({
-        _id: { $in: ids },
-        isdeleted: true,
-      });
-      if (orders.length !== ids.length) {
-        throw new ErrorHandler(
-          404,
-          "One or more orders not found or not in Recycle Bin"
-        );
-      }
-      // Restore orders
-      const result = await Order.updateMany(
-        { _id: { $in: ids }, isdeleted: true },
-        { $set: { isdeleted: false, deletedAt: null } }
-      );
-      if (result.modifiedCount === 0) {
-        throw new ErrorHandler(500, "Failed to restore orders");
-      }
-      if (result.modifiedCount === 0) {
-        throw new ErrorHandler(500, "Failed to restore orders");
-      }
-      return res.status(200).json({
-        success: true,
-        message: `${result.modifiedCount} order(s) restored successfully`,
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    throw new ErrorHandler(500, "Internal server error");
-  }
-};
+// export const restoreOrder = async (req: CustomRequest, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const { ids } = req.body;
+//     if (!req.user) {
+//       throw new ErrorHandler(401, "Unauthorized: User not found");
+//     }
+//     // Handle single order restore
+//     if (id) {
+//       const order = await Order.findById(id);
+//       if (!order) {
+//         throw new ErrorHandler(404, "Order not found");
+//       }
+//       if (!order.isdeleted) {
+//         throw new ErrorHandler(400, "Order is not in Recycle Bin");
+//       }
+//       order.isdeleted = false;
+//       order.deletedAt = null;
+//       await order.save();
+//       return res.status(200).json({
+//         success: true,
+//         message: "Order restored successfully",
+//       });
+//     }
+//     // Handle multiple order restore
+//     if (ids && Array.isArray(ids) && ids.length > 0) {
+//       // Verify all orders exist and are in recycle bin
+//       const orders = await Order.find({
+//         _id: { $in: ids },
+//         isdeleted: true,
+//       });
+//       if (orders.length !== ids.length) {
+//         throw new ErrorHandler(
+//           404,
+//           "One or more orders not found or not in Recycle Bin"
+//         );
+//       }
+//       // Restore orders
+//       const result = await Order.updateMany(
+//         { _id: { $in: ids }, isdeleted: true },
+//         { $set: { isdeleted: false, deletedAt: null } }
+//       );
+//       if (result.modifiedCount === 0) {
+//         throw new ErrorHandler(500, "Failed to restore orders");
+//       }
+//       if (result.modifiedCount === 0) {
+//         throw new ErrorHandler(500, "Failed to restore orders");
+//       }
+//       return res.status(200).json({
+//         success: true,
+//         message: `${result.modifiedCount} order(s) restored successfully`,
+//       });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     throw new ErrorHandler(500, "Internal server error");
+//   }
+// };
 
 
 //// create funcation for the get order form the recycleBin
-export const getRecycleBinOrders = async (
-  req: CustomRequest,
-  res: Response
-) => {
-  try {
-    if (!req.user) {
-      throw new ErrorHandler(401, "Unauthorized: User not found");
-    }
-    const orders = await Order.find({
-      isdeleted: true,
-    });
-    if (orders.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No orders found in Recycle Bin",
-        data: [],
-      });
-    }
-    return res.status(200).json({
-      success: true,
-      data: orders,
-    });
-  } catch (error) {
-    if (error instanceof ErrorHandler) {
-      throw error;
-    }
-    throw new ErrorHandler(500, "Internal server error");
-  }
-};
+// export const getRecycleBinOrders = async (
+//   req: CustomRequest,
+//   res: Response
+// ) => {
+//   try {
+//     if (!req.user) {
+//       throw new ErrorHandler(401, "Unauthorized: User not found");
+//     }
+//     const orders = await Order.find({
+//       isdeleted: true,
+//     });
+//     if (orders.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No orders found in Recycle Bin",
+//         data: [],
+//       });
+//     }
+//     return res.status(200).json({
+//       success: true,
+//       data: orders,
+//     });
+//   } catch (error) {
+//     if (error instanceof ErrorHandler) {
+//       throw error;
+//     }
+//     throw new ErrorHandler(500, "Internal server error");
+//   }
+// };
 
 
 ///// create a function update order details by ID
@@ -518,5 +518,210 @@ export const searchOrders = async (
   }
 };
 
+
+
+export const deleteOrder = async (req: CustomRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log(req.params, "nnef");
+    const { isSoftdelete = false, permanent = false } = req.body;
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+    const order = await Order.findById(id);
+    if (!order) {
+      throw new ErrorHandler(404, "Order not found");
+    }
+    if (!isSoftdelete && !permanent) {
+      order.isdeleted = true;
+      order.deletedAt = new Date();
+      await order.save();
+      return res.status(200).json({
+        success: true,
+        message: "Order move to Recycle Bin Successfully",
+      });
+    } else if (permanent) {
+      await Order.deleteOne({ _id: id });
+      return res.status(200).json({
+        success: true,
+        message: "Order permanently deleted successfully",
+      });
+    } else {
+      throw new ErrorHandler(400, "Invalid deletion request");
+    }
+  } catch (error) {
+    console.log(error);
+    throw new ErrorHandler(500, "Internal server error");
+  }
+};
+
+
+//// create a funcations for the restoreOrder
+export const restoreOrder = async (req: CustomRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log(req.params, "id check order restore id");
+    const { ids } = req.body;
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+    // Handle single order restore
+    if (id) {
+      const order = await Order.findById(id);
+      if (!order) {
+        throw new ErrorHandler(404, "Order not found");
+      }
+      if (!order.isdeleted) {
+        throw new ErrorHandler(400, "Order is not in Recycle Bin");
+      }
+      order.isdeleted = false;
+      order.deletedAt = null;
+      await order.save();
+      return res.status(200).json({
+        success: true,
+        message: "Order restored successfully",
+      });
+    }
+    // Handle multiple order restore
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Verify all orders exist and are in recycle bin
+      const orders = await Order.find({
+        _id: { $in: ids },
+        isdeleted: true,
+      });
+      if (orders.length !== ids.length) {
+        throw new ErrorHandler(
+          404,
+          "One or more orders not found or not in Recycle Bin"
+        );
+      }
+      // Restore orders
+      const result = await Order.updateMany(
+        { _id: { $in: ids }, isdeleted: true },
+        { $set: { isdeleted: false, deletedAt: null } }
+      );
+      if (result.modifiedCount === 0) {
+        throw new ErrorHandler(500, "Failed to restore orders");
+      }
+      if (result.modifiedCount === 0) {
+        throw new ErrorHandler(500, "Failed to restore orders");
+      }
+      return res.status(200).json({
+        success: true,
+        message: `${result.modifiedCount} order(s) restored successfully`,
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    throw new ErrorHandler(500, "Internal server error");
+  }
+};
+
+
+// Adjust the import path as needed
+
+
+export const deleteOrderPermanently = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { ids } = req.body;
+    // Check if user is authenticated
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+    // Handle single order deletion
+    if (id) {
+      // Validate ObjectId
+      if (!Types.ObjectId.isValid(id)) {
+        throw new ErrorHandler(400, "Invalid order ID");
+      }
+      const order = await Order.findById(id);
+      if (!order) {
+        throw new ErrorHandler(404, "Order not found");
+      }
+      if (!order.isdeleted) {
+        throw new ErrorHandler(404, "Order is not in the recycle bin");
+      }
+      await Order.deleteOne({ _id: id });
+      return res.status(200).json({
+        success: true,
+        message: "Order permanently deleted successfully",
+      });
+    }
+
+
+    // Handle multiple order deletion
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Validate all IDs
+      if (!ids.every((id) => Types.ObjectId.isValid(id))) {
+        throw new ErrorHandler(400, "One or more invalid order IDs");
+      }
+
+
+      const orders = await Order.find({
+        _id: { $in: ids },
+        isdeleted: true,
+      });
+
+
+      if (orders.length === 0) {
+        throw new ErrorHandler(404, "No orders found in the recycle bin");
+      }
+
+
+      const result = await Order.deleteMany({ _id: { $in: ids } });
+      if (result.deletedCount === 0) {
+        throw new ErrorHandler(500, "Failed to delete orders permanently");
+      }
+      return res.status(200).json({
+        success: true,
+        message: `${result.deletedCount} order(s) permanently deleted successfully`,
+      });
+    }
+    throw new ErrorHandler(400, "No order ID(s) provided");
+  } catch (error) {
+    console.error("Error in deleteOrderPermanently:", error);
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof ErrorHandler ? error.message : "Internal server error",
+    });
+  }
+};
+
+
+//// create funcation for the get order form the recycleBin
+export const getRecycleBinOrders = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+    const orders = await Order.find({
+      isdeleted: true,
+    });
+    if (orders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No orders found in Recycle Bin",
+        data: [],
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    if (error instanceof ErrorHandler) {
+      throw error;
+    }
+    throw new ErrorHandler(500, "Internal server error");
+  }
+};
 
 

@@ -8,6 +8,7 @@ import {
   deleteOrder,
   restoreOrder,
   getRecycleBinOrders,
+  deleteOrderPermanently
 } from "../controllers/order.create.js";
 import { TryCatch } from "../middlewares/error.js";
 import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} from "../middlewares/check.permission.middleware.js"
@@ -15,7 +16,12 @@ import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} 
 
 
 
+
+
+
+
 const router = express.Router();
+
 
 router.route("/order-create-api").post(requirePermission("orders","create"),TryCatch(orderCreate));
 router.route("/get-order-details/:id").get(authenticateUser,TryCatch(getOrderDetailsById));
@@ -23,9 +29,39 @@ router.route("/get-all-orders").get(authenticateUser,restrictTo(["admin", "user"
 router.route("/search-order").get(authenticateUser,TryCatch(searchOrders));
 router.route("/upadate-order/:id").get(authenticateUser,restrictToVerifiedUser,TryCatch(updateOrderDetailsById));
 //// deletion management
-router.route("/user-delete-order/:id").delete(authenticateUser,requirePermission("orders","delete"),TryCatch(deleteOrder));
-router.route("/user-restore-order/:id").patch(authenticateUser,TryCatch(restoreOrder));
+
+
+
+
+
+
+
+
+router.route("/delete-order/:id").delete(authenticateUser,requirePermission("orders","delete"),TryCatch(deleteOrder));
+
+
+// Route for single order restore
+console.log('Registered route: PATCH /order/api/user-restore-order/:id');
+router.route('/user-restore-order/:id').post(authenticateUser, TryCatch(restoreOrder));
+// Route for multiple order restore
+router.route('/restore-orders/').post(authenticateUser, TryCatch(restoreOrder));
+
+
+// Route for getting orders in recycle bin
+console.log('Registered route: GET /user-recycle-bin-order/');
+//// deletion order single permanently
+router.route("/user-delete-permanently/:id").delete(authenticateUser, TryCatch(deleteOrderPermanently));
+//// deletion order multiple permanently
+router.route("/user-delete-permanently/").delete(authenticateUser, TryCatch(deleteOrderPermanently ));
+
+
 router.route("/user-recycle-bin-order/").get(authenticateUser,TryCatch(getRecycleBinOrders));
 
 
+
+
 export default router;
+
+
+
+
