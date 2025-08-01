@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+
 const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, required: true, unique: true },
@@ -21,8 +22,13 @@ const orderSchema = new mongoose.Schema(
     generatedBy: {
       username:{type:String,required:false},
       employeeId: { type: String, required: false },
+       userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: false,
+      },
     },
-    
+   
     // orderThrougth: { type: String },
     // department: { type: String, required: true },
     // createdBy: {
@@ -66,4 +72,9 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
 export default mongoose.model("Order", orderSchema);
+
+
+
+

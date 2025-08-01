@@ -8,7 +8,8 @@ import {
   deleteOrder,
   restoreOrder,
   getRecycleBinOrders,
-  deleteOrderPermanently
+  deleteOrderPermanently,
+  getOrdersByUser
 } from "../controllers/order.create.js";
 import { TryCatch } from "../middlewares/error.js";
 import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} from "../middlewares/check.permission.middleware.js"
@@ -20,7 +21,17 @@ import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} 
 
 
 
+
+
+
+
+
+
+
+
 const router = express.Router();
+
+
 
 
 router.route("/order-create-api").post(requirePermission("orders","create"),TryCatch(orderCreate));
@@ -37,7 +48,17 @@ router.route("/upadate-order/:id").get(authenticateUser,restrictToVerifiedUser,T
 
 
 
+
+
+
+
+
+
+
+
 router.route("/delete-order/:id").delete(authenticateUser,requirePermission("orders","delete"),TryCatch(deleteOrder));
+
+
 
 
 // Route for single order restore
@@ -45,14 +66,15 @@ console.log('Registered route: PATCH /order/api/user-restore-order/:id');
 router.route('/user-restore-order/:id').post(authenticateUser, TryCatch(restoreOrder));
 // Route for multiple order restore
 router.route('/restore-orders/').post(authenticateUser, TryCatch(restoreOrder));
-
-
 // Route for getting orders in recycle bin
 console.log('Registered route: GET /user-recycle-bin-order/');
 //// deletion order single permanently
 router.route("/user-delete-permanently/:id").delete(authenticateUser, TryCatch(deleteOrderPermanently));
 //// deletion order multiple permanently
 router.route("/user-delete-permanently/").delete(authenticateUser, TryCatch(deleteOrderPermanently ));
+router.route("/user-get-po-login-user/").get(authenticateUser, TryCatch(getOrdersByUser));
+
+
 
 
 router.route("/user-recycle-bin-order/").get(authenticateUser,TryCatch(getRecycleBinOrders));
@@ -60,7 +82,19 @@ router.route("/user-recycle-bin-order/").get(authenticateUser,TryCatch(getRecycl
 
 
 
+
+
+
+
 export default router;
+
+
+
+
+
+
+
+
 
 
 
