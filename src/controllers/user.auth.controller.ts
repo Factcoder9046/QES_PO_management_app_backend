@@ -498,7 +498,7 @@ export const getAllUser = async (
     // Aggregation pipeline
     const pipeline: mongoose.PipelineStage[] = [
       // Initial user match: only verified users and specific userType
-      { $match: { userType: "user" } }, // Filter verified users
+      { $match: { userType: { $in: ["user", "subadmin"] } } }, // Filter verified users
       // Lookup to join orders
       {
         $lookup: {
@@ -520,6 +520,8 @@ export const getAllUser = async (
           profilePicture: 1,
           // orders: 1,
           orderCount: { $size: "$orders" },
+          desgination:1,
+          userType:1
         },
       },
       // Sort by username
