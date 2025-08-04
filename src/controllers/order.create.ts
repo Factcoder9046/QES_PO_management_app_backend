@@ -1,5 +1,3 @@
-
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from "express";
 import Order from "../models/order.model.js";
@@ -10,9 +8,6 @@ import ErrorHandler from "../utils/errorHandler.js";
 import { createOrderNotification } from "./notificationService.js";
 import { CustomRequest } from "../middlewares/check.permission.middleware.js";
 
-
-
-
 // Function to generate orderNumber in format "01/QESPL/JUN/25"
 export const createOrderNumber = async (
   date: Date = new Date()
@@ -22,9 +17,6 @@ export const createOrderNumber = async (
     .toLocaleString("default", { month: "short" })
     .toUpperCase();
   const yearShort = year.toString().slice(-2);
-
-
-
 
   // Get the next sequence number for the current month
   const prefix = `QESPL/${monthName}/${yearShort}`;
@@ -39,15 +31,9 @@ export const createOrderNumber = async (
     sequence = lastSequence + 1;
   }
 
-
-
-
   const orderNumber = `${String(sequence).padStart(2, "0")}/${prefix}`;
   return orderNumber;
 };
-
-
-
 
 export const orderCreate = async (
   req: CustomRequest,
@@ -67,7 +53,7 @@ export const orderCreate = async (
       estimatedDispatchDate,
       generatedBy,
       orderThrough,
-    } = req.body
+    } = req.body;
     if (
       !clientName ||
       !generatedBy ||
@@ -121,7 +107,6 @@ export const orderCreate = async (
         username: orderThrough.username,
         employeeId: orderThrough.employeeId, // From request body
       },
-     
     });
     const savedOrder = await newOrder.save();
     // Notification logic
@@ -140,7 +125,7 @@ export const orderCreate = async (
       data: savedOrder,
     });
   } catch (error) {
-     // Handle MongoDB duplicate key error
+    // Handle MongoDB duplicate key error
     if (error.code === 11000 && error.keyPattern?.orderNumber) {
       return next(
         new ErrorHandler(
@@ -152,9 +137,6 @@ export const orderCreate = async (
     next(error);
   }
 };
-
-
-
 
 export const getOrderDetailsById = async (
   req: Request,
@@ -179,9 +161,6 @@ export const getOrderDetailsById = async (
     next(error);
   }
 };
-
-
-
 
 export const getAllOrders = async (
   req: Request,
@@ -223,16 +202,110 @@ export const getAllOrders = async (
   }
 };
 
-
-
-
-
-
-
-
-
-
 ///// create a function update order details by ID
+// export const updateOrderDetailsById = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { id } = req.params;
+//     const {
+//     orderNumber,
+//       clientName,
+//       companyName,
+//       gstNumber,
+//       contact,
+//       address,
+//       zipCode,
+//       products,
+//       estimatedDispatchDate,
+//       generatedBy,
+//       orderThrough,
+//       status
+//     } = req.body;
+//     console.log(generatedBy,orderThrough,products)
+
+//     // Validate products array
+//     if (!Array.isArray(products) || products.length === 0) {
+//       throw new ErrorHandler(
+//         400,
+//         "Products array is required and cannot be empty"
+//       );
+//     }
+//     for (const product of products) {
+//       console.log(product,"jjhd")
+//       if (
+//         !product.name ||
+//         typeof product.quantity !== "number" ||
+//         product.quantity < 0
+//       ) {
+//         throw new ErrorHandler(
+//           400,
+//           "Each product must have a name, a valid price (number), and a valid quantity (non-negative number)"
+//         );
+//       }
+//     }
+//     // Validate GST number if provided
+//     if (gstNumber) {
+//       const gstRegex =
+//         /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+//       if (!gstRegex.test(gstNumber)) {
+//         throw new ErrorHandler(
+//           400,
+//           "GST number must be exactly 15 characters and follow the valid Indian GST format (e.g., 27AABCU9603R1ZM)"
+//         );
+//       }
+//     }
+//     // Update the order
+//     const updateData: any = {
+//       orderNumber,
+//       companyName,
+//       products,
+//       generatedBy,
+//       orderThrough,
+//     };
+
+//     // Include optional fields if provided
+//     if (clientName) updateData.clientName = clientName;
+//     if (contact) updateData.contact = contact;
+//     if (address) updateData.address = address;
+//     if (zipCode) updateData.zipCode = zipCode;
+//     if (estimatedDispatchDate) updateData.estimatedDispatchDate = estimatedDispatchDate;
+//     if (status) updateData.status = status;
+//     const updatedOrder = await Order.findByIdAndUpdate(
+//       id,
+//       updateData,
+//       { new: true, runValidators: true } // Return updated document and run schema validators
+//     );
+
+//     if (!updatedOrder) {
+//       throw new ErrorHandler(404, 'Order not found');
+//     }
+//     ///// create a notification for the updated order
+//     const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
+//     const userId = (req as any).user?.id;
+//     const io = req.app.get("io");
+//     if (updatedOrder) {
+//       await createOrderNotification(
+//         updatedOrder._id.toString(),
+//         userId,
+//         io,
+//         userSocketMap,
+//         "update"
+//       );
+//     }
+//     // Return the updated order
+//     return res.status(200).json({
+//       success: true,
+//       message: "Order updated successfully",
+//       data: updatedOrder,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 export const updateOrderDetailsById = async (
   req: Request,
   res: Response,
@@ -251,79 +324,79 @@ export const updateOrderDetailsById = async (
       products,
       estimatedDispatchDate,
       generatedBy,
-      formGeneratedBy,
-      orderCategory,
+      orderThrough,
+      status,
     } = req.body;
-    // Validate required fields
-    if (
-      !clientName ||
-      !contact ||
-      !address ||
-      !zipCode ||
-      !products ||
-      !generatedBy ||
-      !generatedBy.name ||
-      !generatedBy.employeeId
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
-    }
+    console.log(generatedBy, orderThrough, products);
+
     // Validate products array
     if (!Array.isArray(products) || products.length === 0) {
-      throw new ErrorHandler(
-        400,
-        "Products array is required and cannot be empty"
-      );
+      throw new ErrorHandler(400, "Products array is required and cannot be empty");
     }
-    for (const product of products) {
-      if (
-        !product.name ||
-        typeof product.price !== "number" ||
-        typeof product.quantity !== "number" ||
-        product.quantity < 0
-      ) {
+
+    // Validate and convert product fields
+    const validatedProducts = products.map((product) => {
+      console.log(product, "jjhd");
+      const { name, quantity, remark } = product;
+
+      // Validate name
+      if (!name || typeof name !== "string") {
+        throw new ErrorHandler(400, "Each product must have a valid name (string)");
+      }
+
+      // Convert and validate quantity
+      const parsedQuantity = typeof quantity === "string" ? parseInt(quantity, 10) : quantity;
+      if (typeof parsedQuantity !== "number" || isNaN(parsedQuantity) || parsedQuantity < 0) {
         throw new ErrorHandler(
           400,
-          "Each product must have a name, a valid price (number), and a valid quantity (non-negative number)"
+          "Each product must have a valid quantity (non-negative number)"
         );
       }
-    }
+
+      return {
+        ...product,
+        quantity: parsedQuantity,
+      };
+    });
+
     // Validate GST number if provided
-    if (gstNumber) {
-      const gstRegex =
-        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-      if (!gstRegex.test(gstNumber)) {
-        throw new ErrorHandler(
-          400,
-          "GST number must be exactly 15 characters and follow the valid Indian GST format (e.g., 27AABCU9603R1ZM)"
-        );
-      }
-    }
+    // if (gstNumber) {
+    //   const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    //   if (!gstRegex.test(gstNumber)) {
+    //     throw new ErrorHandler(
+    //       400,
+    //       "GST number must be exactly 15 characters and follow the valid Indian GST format (e.g., 27AABCU9603R1ZM)"
+    //     );
+    //   }
+    // }
+
     // Update the order
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id,
-      {
-        orderNumber,
-        clientName,
-        companyName,
-        gstNumber,
-        contact,
-        address,
-        zipCode,
-        products,
-        estimatedDispatchDate,
-        generatedBy,
-        formGeneratedBy,
-        orderCategory,
-      },
-      { new: true, runValidators: true } // Return the updated document and run schema validators
-    );
+    const updateData: any = {
+      orderNumber,
+      companyName,
+      products: validatedProducts,
+      generatedBy,
+      orderThrough,
+    };
+
+    // Include optional fields if provided
+    if (clientName) updateData.clientName = clientName;
+    if (contact) updateData.contact = contact;
+    if (address) updateData.address = address;
+    if (zipCode) updateData.zipCode = zipCode;
+    if (estimatedDispatchDate) updateData.estimatedDispatchDate = estimatedDispatchDate;
+    if (status) updateData.status = status;
+
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
     if (!updatedOrder) {
-      throw new ErrorHandler(400, "Order not found");
+      throw new ErrorHandler(404, "Order not found");
     }
-    ///// create a notification for the updated order
+
+    // Create a notification for the updated order
     const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
     const userId = (req as any).user?.id;
     const io = req.app.get("io");
@@ -337,9 +410,6 @@ export const updateOrderDetailsById = async (
       );
     }
 
-
-
-
     // Return the updated order
     return res.status(200).json({
       success: true,
@@ -351,9 +421,6 @@ export const updateOrderDetailsById = async (
   }
 };
 
-
-
-
 /// create funcation for the searching base on this parameters like clientName, companyName,  products.name, generatedBy.name
 export const searchOrders = async (
   req: Request,
@@ -362,7 +429,6 @@ export const searchOrders = async (
 ) => {
   try {
     const { query, startDate, endDate, status } = req.query;
-    console.log(startDate, endDate, "jhgdsgdsf");
     const searchQuery: FilterQuery<typeof Order> = {};
     if (query && typeof query === "string") {
       const regex = { $regex: new RegExp(query, "i") }; // Case-insensitive regex
@@ -412,15 +478,9 @@ export const searchOrders = async (
   }
 };
 
-
-
-
-
-
 export const deleteOrder = async (req: CustomRequest, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(req.params, "nnef");
     const { isSoftdelete = false, permanent = false } = req.body;
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
@@ -452,14 +512,10 @@ export const deleteOrder = async (req: CustomRequest, res: Response) => {
   }
 };
 
-
-
-
 //// create a funcations for the restoreOrder
 export const restoreOrder = async (req: CustomRequest, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(req.params, "id check order restore id");
     const { ids } = req.body;
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
@@ -516,13 +572,7 @@ export const restoreOrder = async (req: CustomRequest, res: Response) => {
   }
 };
 
-
-
-
 // Adjust the import path as needed
-
-
-
 
 export const deleteOrderPermanently = async (
   req: CustomRequest,
@@ -531,7 +581,6 @@ export const deleteOrderPermanently = async (
   try {
     const { id } = req.params;
     const { ids } = req.body;
-    // Check if user is authenticated
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
     }
@@ -554,35 +603,19 @@ export const deleteOrderPermanently = async (
         message: "Order permanently deleted successfully",
       });
     }
-
-
-
-
     // Handle multiple order deletion
     if (ids && Array.isArray(ids) && ids.length > 0) {
       // Validate all IDs
       if (!ids.every((id) => Types.ObjectId.isValid(id))) {
         throw new ErrorHandler(400, "One or more invalid order IDs");
       }
-
-
-
-
       const orders = await Order.find({
         _id: { $in: ids },
         isdeleted: true,
       });
-
-
-
-
       if (orders.length === 0) {
         throw new ErrorHandler(404, "No orders found in the recycle bin");
       }
-
-
-
-
       const result = await Order.deleteMany({ _id: { $in: ids } });
       if (result.deletedCount === 0) {
         throw new ErrorHandler(500, "Failed to delete orders permanently");
@@ -602,9 +635,6 @@ export const deleteOrderPermanently = async (
     });
   }
 };
-
-
-
 
 //// create funcation for the get order form the recycleBin
 export const getRecycleBinOrders = async (
@@ -637,25 +667,43 @@ export const getRecycleBinOrders = async (
   }
 };
 
-
-
-
 ///// create funcation for the get order  throught the login users
 export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
   try {
     if (!req.user) {
-      throw new ErrorHandler(401, 'Unauthorized: User not found');
+      throw new ErrorHandler(401, "Unauthorized: User not found");
     }
     const userId = req.user.id;
-    const orders = await Order.find({})
-      .where('generatedBy.userId')
-      .equals(userId)
-      .select('orderNumber orderThrough companyName products generatedBy status createdAt')
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const [orders, totalCount] = await Promise.all([
+      Order.find({ "generatedBy.userId": userId })
+        .select(
+          "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate"
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Order.countDocuments({ "generatedBy.userId": userId ,isDeleted: false}),
+    ]);
     return res.status(200).json({
       success: true,
-      message: orders.length === 0 ? 'No orders found for this user' : 'Orders retrieved successfully',
-      data: orders,
+      message:
+        orders.length === 0
+          ? "No orders found for this user"
+          : "Orders retrieved successfully",
+      data: {
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          itemsPerPage: limit,
+        },
+      },
     });
   } catch (error) {
     if (error instanceof ErrorHandler) {
@@ -664,12 +712,9 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
         message: error.message,
       });
     }
-    // Handle unexpected errors
     return res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: "Internal server error",
     });
   }
 };
-
-

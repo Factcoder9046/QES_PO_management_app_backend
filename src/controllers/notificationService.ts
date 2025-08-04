@@ -27,102 +27,6 @@ export const hasPermission = async (
 };
 
 
-//// create a notification order action
-
-
-// export const createOrderNotification = async (
-//   orderId: string,
-//   userId: string,
-//   io: Socket, // Use proper Socket type from socket.io
-//   userSocketMap: Map<string, string>,
-//   action: "create" | "update" | "delete"
-// ) => {
-//   const session = await mongoose.startSession();
-//   session.startTransaction();
-
-
-//   // Map action to notification type
-//   const notificationActionMap = {
-//     create: "order_create",
-//     update: "order_update",
-//     delete: "order_delete",
-//   };
-
-
-//   try {
-//     const user = await User.findById(userId).session(session);
-//     if (!user) throw new Error("User not found");
-
-
-//     const order = await Order.findById(orderId).session(session);
-//     if (!order) throw new Error("Order not found");
-//     const actionsMap = {
-//       create: "create",
-//       update: "update",
-//       delete: "delete",
-//     };
-//     const actionMessage = actionsMap[action];
-//     const hasPer = await hasPermission(userId, "orders", actionMessage);
-//     if (!hasPer) {
-//       // Map "delete" to "write" for permission request notification
-//       const permissionAction =
-//         action === "delete"
-//           ? "write"
-//           : (actionsMap[action] as "create" | "update" | "write" | "read");
-//       await createPermissionRequestNotification(
-//         userId,
-//         permissionAction,
-//         `Permission to ${action} order #${order.orderNumber}`,
-//         io
-//       );
-//       throw new Error(`Permission required for ${action} on orders`);
-//     }
-//     const allUsers = await User.find({}).select("_id").session(session);
-//     const recipients = allUsers.map((user) => ({
-//       userId: user._id,
-//       isRead: false,
-//     }));
-
-
-//     const message = `User ${user.username} ${action}d order #${order.orderNumber}`;
-
-
-//     const notification = new Notification({
-//       type: notificationActionMap[action],
-//       message,
-//       sender: { userId: user._id, username: user.username },
-//       recipients,
-//       referenceId: order._id,
-//       referenceModel: "Order",
-//     });
-
-
-//     await notification.save({ session });
-
-
-//     recipients.forEach((recipient) => {
-//       const socketId = userSocketMap.get(recipient.userId.toString());
-//       if (socketId) {
-//         io.to(`user:${recipient.userId}`).emit("notification", {
-//           id: notification._id,
-//           type: notification.type,
-//           message: notification.message,
-//           sender: notification.sender,
-//           createdAt: notification.createdAt,
-//         });
-//       }
-//     });
-
-
-//     await session.commitTransaction();
-//     return notification;
-//   } catch (error) {
-//     await session.abortTransaction();
-//     throw error;
-//   } finally {
-//     session.endSession();
-//   }
-// };
 
 
 ///// create a notification for the permissionRequest action for the admin
@@ -232,8 +136,6 @@ export const createOrderNotification = async (
   try {
     const user = await User.findById(userId).session(session);
     if (!user) throw new Error("User not found");
-
-
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Order not found");
     const actionsMap = {
@@ -264,7 +166,7 @@ export const createOrderNotification = async (
     }));
 
 
-    const message = `${user.username} ${action}d PO #${order.orderNumber}`;
+    const message = `User ${user.username} ${action}d order #${order.orderNumber}`;
 
 
     const notification = new Notification({
@@ -303,4 +205,3 @@ export const createOrderNotification = async (
     session.endSession();
   }
 };
-

@@ -20,7 +20,6 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
           "http://13.201.188.234:4000",
         ];
         if (process.env.CORS_ORIGIN) {
-          console.log("CORS_ORIGIN from env:", process.env.CORS_ORIGIN);
           const envOrigins = process.env.CORS_ORIGIN.split(",").map((origin) =>
             origin.trim().replace(/\/$/, "")
           );
@@ -44,11 +43,7 @@ export const initializeWebSocket = (server: HttpServer, app: Application) => {
   // WebSocket connection handling
   io.on("connection", async (socket) => {
     console.log("New WebSocket connection:", socket.id);
-
-    // Get JWT token from query or headers
-    console.log("Socket handshake query:", socket.handshake.query, "socket.handshake.headers:", socket);
     const token = socket.handshake.query.token as string;
-    console.log("JWT Token:", token);
 
     if (!token) {
       console.log("No token provided, disconnecting:", socket.id);

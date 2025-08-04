@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-
 const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, required: true, unique: true },
@@ -13,7 +12,6 @@ const orderSchema = new mongoose.Schema(
     products: [
       {
         name: { type: String, required: true },
-        price: { type: Number, required: true },
         quantity: { type: Number, required: true, min: 0 },
         remark: { type: String, required: false },
       },
@@ -28,7 +26,7 @@ const orderSchema = new mongoose.Schema(
         required: false,
       },
     },
-   
+    
     // orderThrougth: { type: String },
     // department: { type: String, required: true },
     // createdBy: {
@@ -72,9 +70,4 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-
 export default mongoose.model("Order", orderSchema);
-
-
-
-

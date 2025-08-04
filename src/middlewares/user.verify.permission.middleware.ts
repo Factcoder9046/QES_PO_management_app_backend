@@ -26,46 +26,6 @@ interface CustomJwtPayload extends JwtPayload {
   exp: number;
 }
 
-// export const adminVerify = (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   let token: string | undefined;
-//   if (req.headers.cookie) {
-//     token = req.headers.cookie.split("jwt=")[1];
-//   } else {
-//     throw new ErrorHandler(401, "No token provided");
-//   }
-//   if (!token) {
-//     throw new ErrorHandler(401, "No token provided");
-//   }
-//   try {
-//     const decoded = jwt.verify(
-//       token,
-//       process.env.JWT_SECRET as string
-//     ) as CustomJwtPayload ;
-//     const allowRole=["admin","subadmin"]
-//     if(!allowRole.includes(decoded.userType)){
-//       throw new ErrorHandler(403, 'Not authorized: Required role access denied');
-//     }
-//     req.user = {
-//       id: user._id.toString(),
-//       userType: user.userType,
-//       // isVerified: user.Isverified,
-//       permissions: [], // No permissions loaded here; adjust if needed
-//     };
-//     next();
-//   } catch (error) {
-//     console.error("Token verification error:", error);
-//     return res.status(401).json({
-//       success: false,
-//       message: "Invalid token",
-//     });
-//   }
-// };
-
-///// create a funcation to check throught this what kinds of permission and also check user verify througth admin or not
 
 export const adminVerify = async (
   req: CustomRequest,

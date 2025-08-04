@@ -317,7 +317,7 @@ export const restrictToVerifiedUser = (
   }
   // This middleware seems to imply "user" type specifically and verified.
   // If it's just about being verified for *any* user type, adjust the logic.
-  if (req.user.userType !== "user") {
+  if (req.user.userType !== "user" ) {
     return res.status(403).json({
       success: false,
       message: "Forbidden: Only verified users can access this resource.",
