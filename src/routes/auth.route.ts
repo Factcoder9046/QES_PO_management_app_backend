@@ -47,6 +47,7 @@ userRouter.route("/admin-signup").post(TryCatch(adminSignup));
 userRouter.route("/admin-sigin").post(TryCatch(adminLogin));
 userRouter.route("/admin-create-user").post(adminVerify,upload.single("profilePicture"),restrictTo(["admin","subadmin"]),adminCreateUser);
 userRouter.route("/admin-assign-permission").post(adminVerify,restrictTo(["admin", "subadmin"]),assignPermissions)
+userRouter.route("/assign-permission-to-admin").post(assignPermissions)
 userRouter.route("/admin-get-all-user").get(adminVerify,restrictTo(["admin","subadmin"]),getAllUser)
 userRouter.route("/admin-delete/:id").delete(adminVerify,restrictTo(["admin","subadmin"]),deleteUser)
 userRouter.route("/admin-user-profie").get(adminVerify,restrictTo(["admin","subadmin"]),searchProfile)

@@ -156,6 +156,57 @@ export const assignPermissions = async (
     next(error);
   }
 };
+export const assignPermissionToAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId, resource, actions } = req.body;
+    if (!userId || !resource || !actions || !Array.isArray(actions)) {
+      throw new ErrorHandler(
+        400,
+        "User ID, resource, and actions are required"
+      );
+    }
+    // Validate user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new ErrorHandler(400, "User not found");
+    }
+    // Validate resource and actions
+    const validResources = ["users", "permissions", "orders"];
+    const validActions = ["readOnly", "create", "update", "delete"];
+    if (!validResources.includes(resource)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid resource. Must be one of: ${validResources.join(
+          ", "
+        )}`,
+      });
+    }
+    if (!actions.every((action: string) => validActions.includes(action))) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid actions. Must be one of: ${validActions.join(", ")}`,
+      });
+    }
+    // Upsert permission (update if exists, create if not)
+    await Permission.findOneAndUpdate(
+      { userId, resource },
+      { actions },
+      { upsert: true, new: true }
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Permissions assigned successfully",
+      permission: { userId, resource, actions },
+    });
+  } catch (error) {
+    console.error("Assign permissions error:", error);
+    next(error);
+  }
+};
 
 ////// admin create user funcation
 export const adminCreateUser = async (
