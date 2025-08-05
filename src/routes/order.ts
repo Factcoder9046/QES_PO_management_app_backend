@@ -19,7 +19,7 @@ router.route("/order-create-api").post(requirePermission("orders","create"),TryC
 router.route("/get-order-details/:id").get(authenticateUser,TryCatch(getOrderDetailsById));
 router.route("/get-all-orders").get(authenticateUser,restrictTo(["admin", "user","subadmin"]),TryCatch(getAllOrders));
 router.route("/search-order").get(authenticateUser,TryCatch(searchOrders));
-router.route("/upadate-order/:id").put(authenticateUser,restrictToVerifiedUser,TryCatch(updateOrderDetailsById));
+router.route("/upadate-order/:id").put(authenticateUser,TryCatch(updateOrderDetailsById));
 router.route("/get-order-login-user/").get(authenticateUser,TryCatch(getOrdersByUser));
 
 
