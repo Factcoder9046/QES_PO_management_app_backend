@@ -681,7 +681,7 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
     const [orders, totalCount] = await Promise.all([
       Order.find({ "generatedBy.userId": userId })
         .select(
-          "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate"
+          "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate isdeleted"
         )
         .sort({ createdAt: -1 })
         .skip(skip)
