@@ -672,36 +672,69 @@ export const getRecycleBinOrders = async (
 
 
 export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      throw new ErrorHandler(401, "Unauthorized: User not found");
-    }
-    const userId = req.user.id;
+  try {
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
 
-    const orders = await Order.find({ "generatedBy.userId": userId, isdeleted: false }).select(
-      "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate isdeleted"
-    ).sort({ createdAt: -1 });
+    const userId = new mongoose.Types.ObjectId(req.user.id);
 
-    return res.status(200).json({
-      success: true,
-      message:
-        orders.length === 0
-          ? "No orders found for this user"
-          : "Orders retrieved successfully",
-      data: {
-        orders,
-      },
-    });
-  } catch (error) {
-    if (error instanceof ErrorHandler) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
+    const orders = await Order.aggregate([
+      {
+        $match: {
+          "generatedBy.userId": userId,
+          isdeleted: false,
+          $or: [
+            { deletedAt: null },
+            { deletedAt: { $exists: false } }
+          ]
+        }
+      },
+      {
+        $project: {
+          orderNumber: 1,
+          orderThrough: 1,
+          companyName: 1,
+          clientName: 1,
+          address: 1,
+          zipCode: 1,
+          contact: 1,
+          gstNumber: 1,
+          products: 1,
+          generatedBy: 1,
+          status: 1,
+          createdAt: 1,
+          estimatedDispatchDate: 1,
+          isdeleted: 1,
+        }
+      },
+      {
+        $sort: {
+          createdAt: -1
+        }
+      }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: orders.length === 0 ? "No orders found for this user" : "Orders retrieved successfully",
+      data: {
+        orders,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ErrorHandler) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
+
+
+
