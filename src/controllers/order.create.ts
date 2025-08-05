@@ -668,53 +668,37 @@ export const getRecycleBinOrders = async (
 };
 
 ///// create funcation for the get order  throught the login users
-export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      throw new ErrorHandler(401, "Unauthorized: User not found");
-    }
-    const userId = req.user.id;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
 
-    const [orders, totalCount] = await Promise.all([
-      Order.find({ "generatedBy.userId": userId })
-        .select(
-          "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate isdeleted"
-        )
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Order.countDocuments({ "generatedBy.userId": userId ,isDeleted: false}),
-    ]);
-    return res.status(200).json({
-      success: true,
-      message:
-        orders.length === 0
-          ? "No orders found for this user"
-          : "Orders retrieved successfully",
-      data: {
-        orders,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          itemsPerPage: limit,
-        },
-      },
-    });
-  } catch (error) {
-    if (error instanceof ErrorHandler) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
+export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      throw new ErrorHandler(401, "Unauthorized: User not found");
+    }
+
+    const orders = await Order.find({ isdeleted: false }).select(
+      "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate isdeleted"
+    ).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        orders.length === 0
+          ? "No orders found"
+          : "Orders retrieved successfully",
+      data: {
+        orders,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ErrorHandler) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
