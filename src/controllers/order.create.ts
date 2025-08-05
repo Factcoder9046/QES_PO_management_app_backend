@@ -669,13 +669,16 @@ export const getRecycleBinOrders = async (
 
 ///// create funcation for the get order  throught the login users
 
+
+
 export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
   try {
     if (!req.user) {
       throw new ErrorHandler(401, "Unauthorized: User not found");
     }
+    const userId = req.user.id;
 
-    const orders = await Order.find({ isdeleted: false }).select(
+    const orders = await Order.find({ "generatedBy.userId": userId, isdeleted: false }).select(
       "orderNumber orderThrough companyName clientName address zipCode contact gstNumber products generatedBy status createdAt estimatedDispatchDate isdeleted"
     ).sort({ createdAt: -1 });
 
@@ -683,7 +686,7 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
       success: true,
       message:
         orders.length === 0
-          ? "No orders found"
+          ? "No orders found for this user"
           : "Orders retrieved successfully",
       data: {
         orders,
