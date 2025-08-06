@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-    orderDate:{type:Date,required:true}, 
+    orderDate:{type:Date,required:false}, 
     invoiceNumber:{type:String,required:false},
     orderNumber: { type: String, required: true, unique: true },
     clientName: { type: String, required: true },
