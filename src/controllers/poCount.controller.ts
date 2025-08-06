@@ -65,6 +65,18 @@ export const getDelayedPOCount = async (req, res) => {
 /**
  * Controller function for '/rejected-po-count'.
  */
+// export const getRejectedPOCount = async (req, res) => {
+//     await getPOCountByStatus(req, res, 'rejected');
+// };
+
 export const getRejectedPOCount = async (req, res) => {
-    await getPOCountByStatus(req, res, 'rejected');
+    try {
+        // Query MongoDB to count documents where 'isdeleted' is true
+        const count = await orderModel.countDocuments({ isdeleted: true });
+        // Respond with 'rejected_po_count' to maintain consistency with frontend naming
+        res.status(200).json({ rejected_po_count: count });
+    } catch (error) {
+        console.error("Error fetching rejected (deleted) PO count from DB:", error);
+        res.status(500).json({ message: "Internal server error", error: error.message });
+    }
 };

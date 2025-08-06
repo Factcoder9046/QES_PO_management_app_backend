@@ -13,6 +13,7 @@ import {
 } from "../controllers/order.create.js";
 import { TryCatch } from "../middlewares/error.js";
 import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} from "../middlewares/check.permission.middleware.js"
+import { getCompletedPOCount, getDelayedPOCount, getPendingPOCount, getRejectedPOCount, getTotalPOCount } from "@/controllers/poCount.controller.js";
 const router = express.Router();
 
 
@@ -50,6 +51,22 @@ router.route("/user-get-po-login-user/").get(authenticateUser, TryCatch(getOrder
 
 
 router.route("/user-recycle-bin-order/").get(authenticateUser,TryCatch(getRecycleBinOrders));
+
+
+
+
+
+
+
+
+
+// Count Routes
+
+router.route("/get-total-po-count").get(authenticateUser,getTotalPOCount)
+router.route("/get-completed-po-count").get(authenticateUser,getCompletedPOCount)
+router.route("/get-pending-po-count").get(authenticateUser,getPendingPOCount)
+router.route("/get-delayed-po-count").get(authenticateUser,getDelayedPOCount)
+router.route("/get-rejected-po-count").get(authenticateUser,getRejectedPOCount)
 
 
 

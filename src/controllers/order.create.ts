@@ -491,6 +491,7 @@ export const deleteOrder = async (req: CustomRequest, res: Response) => {
     }
     if (!isSoftdelete && !permanent) {
       order.isdeleted = true;
+      order.status="rejected";
       order.deletedAt = new Date();
       await order.save();
       return res.status(200).json({

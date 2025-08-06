@@ -166,7 +166,7 @@ export const createOrderNotification = async (
     }));
 
 
-    const message = `User ${user.username} ${action}d order #${order.orderNumber}`;
+    const message = `${user.username} ${action}d order #${order.orderNumber}`;
 
 
     const notification = new Notification({
