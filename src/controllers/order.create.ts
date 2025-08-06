@@ -53,16 +53,21 @@ export const orderCreate = async (
       estimatedDispatchDate,
       generatedBy,
       orderThrough,
+      orderDate, // <-- ADDED THIS LINE
+      invoiceNumber, // <-- ADDED THIS LINE (assuming it's also missing based on frontend)
     } = req.body;
+
     if (
       !clientName ||
       !generatedBy ||
       !req.user ||
       !req.user.id ||
-      !req.user.username
+      !req.user.username ||
+      !orderDate // <-- ADDED THIS VALIDATION
     ) {
       throw new ErrorHandler(400, "Missing or invalid required fields");
     }
+
     // Validate products array
     if (!Array.isArray(products) || products.length === 0) {
       throw new ErrorHandler(
@@ -70,6 +75,7 @@ export const orderCreate = async (
         "Products array is required and cannot be empty"
       );
     }
+
     for (const product of products) {
       if (
         !product.name ||
@@ -84,9 +90,11 @@ export const orderCreate = async (
         });
       }
     }
+
     // Generate order number if not provided
     const userId = req.user.id;
     const orderNumber = providedOrderNumber || (await createOrderNumber());
+
     // Create and save the order
     const newOrder = new Order({
       orderNumber,
@@ -107,8 +115,16 @@ export const orderCreate = async (
         username: orderThrough.username,
         employeeId: orderThrough.employeeId, // From request body
       },
+      orderDate, // <-- ADDED THIS LINE
+      invoiceNumber, // <-- ADDED THIS LINE
+      status: "pending", // Assuming these defaults are applied on backend
+      department: "default",
+      isdeleted: false,
+      deletedAt: null,
     });
+
     const savedOrder = await newOrder.save();
+
     // Notification logic
     const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
     const io = req.app.get("io");
@@ -119,6 +135,7 @@ export const orderCreate = async (
       userSocketMap,
       "create"
     );
+
     return res.status(201).json({
       success: true,
       message: "Order created successfully",
@@ -137,6 +154,7 @@ export const orderCreate = async (
     next(error);
   }
 };
+
 
 export const getOrderDetailsById = async (
   req: Request,
@@ -693,6 +711,7 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
       },
       {
         $project: {
+          orderDate:1,
           orderNumber: 1,
           orderThrough: 1,
           companyName: 1,

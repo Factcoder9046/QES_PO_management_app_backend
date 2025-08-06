@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
+    orderDate:{type:Date,required:true}, 
+    invoiceNumber:{type:String,required:false},
     orderNumber: { type: String, required: true, unique: true },
     clientName: { type: String, required: true },
     companyName: { type: String,required: false },
@@ -26,17 +28,7 @@ const orderSchema = new mongoose.Schema(
         required: false,
       },
     },
-    
-    // orderThrougth: { type: String },
-    // department: { type: String, required: true },
-    // createdBy: {
-    //   userId: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "User",
-    //     required: false,
-    //   },
-    //   username: { type: String, required: false },
-    // },
+
     orderThrough: {
     type: new mongoose.Schema(
       {
