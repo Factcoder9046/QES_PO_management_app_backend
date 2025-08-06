@@ -332,6 +332,7 @@ export const updateOrderDetailsById = async (
   try {
     const { id } = req.params;
     const {
+      orderDate,
       orderNumber,
       clientName,
       companyName,
@@ -390,6 +391,7 @@ export const updateOrderDetailsById = async (
 
     // Update the order
     const updateData: any = {
+      orderDate,
       orderNumber,
       companyName,
       products: validatedProducts,
@@ -398,6 +400,7 @@ export const updateOrderDetailsById = async (
     };
 
     // Include optional fields if provided
+    if(orderDate) updateData.orderDate = orderDate;
     if (clientName) updateData.clientName = clientName;
     if (contact) updateData.contact = contact;
     if (address) updateData.address = address;
