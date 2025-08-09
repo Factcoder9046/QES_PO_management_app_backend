@@ -180,45 +180,56 @@ export const getOrderDetailsById = async (
   }
 };
 
-export const getAllOrders = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    // Get query parameters
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = 10;
-    if (page < 1) {
-      throw new ErrorHandler(400, "Page number must be a positive integer");
-    }
-    const skip = (page - 1) * limit;
-    const totalOrders = await Order.countDocuments();
-    const totalPages = Math.ceil(totalOrders / limit);
-    const orders = await Order.find().skip(skip).sort({ createdAt: -1 });
-    if (page > totalPages && totalOrders > 0) {
-      throw new ErrorHandler(
-        400,
-        `Page ${page} exceeds total pages (${totalPages})`
-      );
-    }
-    return res.status(200).json({
-      success: true,
-      message: "Orders retrieved successfully",
-      data: {
-        orders,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalOrders,
-          limit,
-        },
-      },
-    });
-  } catch (error: unknown) {
-    next(error as Error);
-  }
-};
+// export const getAllOrders = async (
+
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const page = parseInt(req.query.page as string) || 1;
+//     const limit = 10;
+
+//     if (page < 1) {
+//       throw new ErrorHandler(400, "Page number must be a positive integer");
+//     }
+
+//     const skip = (page - 1) * limit;
+
+//     const totalOrders = await Order.countDocuments();
+//     const totalPages = Math.ceil(totalOrders / limit);
+
+//     if (page > totalPages && totalOrders > 0) {
+//       throw new ErrorHandler(
+//         400,
+//         `Page ${page} exceeds total pages (${totalPages})`
+//       );
+//     }
+
+//     const orders = await Order.find()
+//       .skip(skip)
+//       .limit(limit) // ✅ This was missing
+//       .sort({ createdAt: -1 })
+//       .populate("generatedBy", "username"); // ✅ This is needed if you reference a User
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Orders retrieved successfully",
+//       data: {
+//         orders,
+//         pagination: {
+//           currentPage: page,
+//           totalPages,
+//           totalOrders,
+//           limit,
+//         },
+//       },
+//     });
+//   } catch (error: unknown) {
+//     next(error as Error);
+//   }
+// };
+
 
 ///// create a function update order details by ID
 // export const updateOrderDetailsById = async (
@@ -323,6 +334,93 @@ export const getAllOrders = async (
 //     next(error);
 //   }
 // };
+export const getAllOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = 10;
+    const status = (req.query.status as string) || "all";
+    const search = (req.query.search as string) || "";
+    const fromDate = (req.query.fromDate as string) || "";
+    const toDate = (req.query.toDate as string) || "";
+
+    if (page < 1) {
+      throw new ErrorHandler(400, "Page number must be a positive integer");
+    }
+
+    const query: any = { isdeleted: false };
+
+    // Add status filter if not 'all'
+    if (status !== "all") {
+      query.status = status;
+    }
+
+    // Add search query for multiple fields
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: "i" } },
+        { clientName: { $regex: search, $options: "i" } },
+        { companyName: { $regex: search, $options: "i" } },
+        { "generatedBy.username": { $regex: search, $options: "i" } },
+        { "generatedBy.employeeId": { $regex: search, $options: "i" } },
+        { "products.name": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add date range filters
+    if (fromDate || toDate) {
+      query.createdAt = {};
+      if (fromDate) {
+        query.createdAt.$gte = new Date(fromDate);
+      }
+      if (toDate) {
+        // Add one day to the toDate to include the entire day
+        const endOfDay = new Date(toDate);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+        query.createdAt.$lte = endOfDay;
+      }
+    }
+
+    const totalOrders = await Order.countDocuments(query);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    if (page > totalPages && totalOrders > 0) {
+      throw new ErrorHandler(
+        400,
+        `Page ${page} exceeds total pages (${totalPages})`
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .populate("generatedBy", "username");
+
+    return res.status(200).json({
+      success: true,
+      message: "Orders retrieved successfully",
+      data: {
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalOrders,
+          limit,
+        },
+      },
+    });
+  } catch (error: unknown) {
+    next(error as Error);
+  }
+};
+
+
 
 export const updateOrderDetailsById = async (
   req: Request,
