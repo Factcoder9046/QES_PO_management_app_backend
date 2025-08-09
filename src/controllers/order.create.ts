@@ -334,6 +334,9 @@ export const getOrderDetailsById = async (
 //     next(error);
 //   }
 // };
+
+
+
 export const getAllOrders = async (
   req: Request,
   res: Response,
@@ -419,6 +422,96 @@ export const getAllOrders = async (
     next(error as Error);
   }
 };
+
+export const nonApprovalPOs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = 10;
+    const search = (req.query.search as string) || "";
+    const fromDate = (req.query.fromDate as string) || "";
+    const toDate = (req.query.toDate as string) || "";
+
+    if (page < 1) {
+      throw new ErrorHandler(400, "Page number must be a positive integer");
+    }
+
+    // The primary query is to find documents that are not deleted
+    // and have a status of either 'pending' or 'delayed'.
+    const query: any = { 
+      isdeleted: false,
+      status: { $in: ["pending", "delayed"] }
+    };
+
+    // Add search query for multiple fields if a search term is provided
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: "i" } },
+        { clientName: { $regex: search, $options: "i" } },
+        { companyName: { $regex: search, $options: "i" } },
+        { "generatedBy.username": { $regex: search, $options: "i" } },
+        { "generatedBy.employeeId": { $regex: search, $options: "i" } },
+        { "products.name": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add date range filters if fromDate or toDate are provided
+    if (fromDate || toDate) {
+      query.createdAt = {};
+      if (fromDate) {
+        query.createdAt.$gte = new Date(fromDate);
+      }
+      if (toDate) {
+        // Add one day to the toDate to include the entire day
+        const endOfDay = new Date(toDate);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+        query.createdAt.$lte = endOfDay;
+      }
+    }
+
+    // Count the total number of orders that match the query
+    const totalOrders = await Order.countDocuments(query);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    // Handle invalid page numbers if they exceed the total pages
+    if (page > totalPages && totalOrders > 0) {
+      throw new ErrorHandler(
+        400,
+        `Page ${page} exceeds total pages (${totalPages})`
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    // Find the orders with pagination, sorting, and population
+    const orders = await Order.find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .populate("generatedBy", "username");
+
+    // Send the response with the orders and pagination data
+    return res.status(200).json({
+      success: true,
+      message: "Non-approval purchase orders retrieved successfully",
+      data: {
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalOrders,
+          limit,
+        },
+      },
+    });
+  } catch (error: unknown) {
+    next(error as Error);
+  }
+};
+
 
 
 
@@ -797,7 +890,19 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
       throw new ErrorHandler(401, "Unauthorized: User not found");
     }
 
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
     const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    const totalOrders = await Order.countDocuments({
+      "generatedBy.userId": userId,
+      isdeleted: false,
+      $or: [
+        { deletedAt: null },
+        { deletedAt: { $exists: false } }
+      ]
+    });
 
     const orders = await Order.aggregate([
       {
@@ -811,8 +916,19 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
         }
       },
       {
+        $sort: {
+          createdAt: -1
+        }
+      },
+      {
+        $skip: skip
+      },
+      {
+        $limit: Number(limit)
+      },
+      {
         $project: {
-          orderDate:1,
+          orderDate: 1,
           orderNumber: 1,
           orderThrough: 1,
           companyName: 1,
@@ -828,11 +944,6 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
           estimatedDispatchDate: 1,
           isdeleted: 1,
         }
-      },
-      {
-        $sort: {
-          createdAt: -1
-        }
       }
     ]);
 
@@ -841,6 +952,10 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
       message: orders.length === 0 ? "No orders found for this user" : "Orders retrieved successfully",
       data: {
         orders,
+        totalOrders,
+        totalPages: Math.ceil(totalOrders / Number(limit)),
+        currentPage: Number(page),
+        limit: Number(limit),
       },
     });
   } catch (error) {

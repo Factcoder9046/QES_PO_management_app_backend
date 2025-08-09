@@ -9,7 +9,8 @@ import {
   restoreOrder,
   getRecycleBinOrders,
   deleteOrderPermanently,
-  getOrdersByUser
+  getOrdersByUser,
+  nonApprovalPOs
 } from "../controllers/order.create.js";
 import { TryCatch } from "../middlewares/error.js";
 import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} from "../middlewares/check.permission.middleware.js"
@@ -29,6 +30,7 @@ const router = express.Router();
 router.route("/order-create-api").post(requirePermission("orders","create"),TryCatch(orderCreate));
 router.route("/get-order-details/:id").get(authenticateUser,TryCatch(getOrderDetailsById));
 router.route("/get-all-orders").get(authenticateUser,restrictTo(["admin", "user","subadmin"]),TryCatch(getAllOrders));
+router.route("/get-non-approval-orders").get(authenticateUser,restrictTo(["admin", "user","subadmin"]),TryCatch(nonApprovalPOs));
 router.route("/search-order").get(authenticateUser,TryCatch(searchOrders));
 router.route("/upadate-order/:id").put(authenticateUser,TryCatch(updateOrderDetailsById));
 router.route("/get-order-login-user/").get(authenticateUser,TryCatch(getOrdersByUser));
