@@ -16,9 +16,12 @@ const userSchema = new mongoose.Schema({
     },
     employeeId: { type: String, required: false },
     profilePicture: { type: String, default: null },
-    desgination: { type: String, required: false },
+    designation: { type: String, required: false },
 
     },{ timestamps: true })
 
 const User = mongoose.model("User", userSchema)
 export default User
+
+
+
