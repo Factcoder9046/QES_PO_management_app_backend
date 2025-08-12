@@ -221,7 +221,7 @@ export const adminCreateUser = async (
       password,
       userType = "user",
       employeeId,
-      desgination
+      designation
     } = req.body;
     if (!username || !email || !password) {
       throw new ErrorHandler(400, "Username, email, and password are required");
@@ -241,7 +241,7 @@ export const adminCreateUser = async (
       Isverified: false,
       profilePicture,
       employeeId,
-      desgination
+      designation
     });
     return res.status(201).json({
       success: true,
@@ -331,7 +331,7 @@ export const subAdminCreate = async (
       department,
       userType = "subadmin",
       employeeId,
-      desgination
+      designation
     } = req.body;
     // Validate required fields
     if (!username || !email || !password || !department) {
@@ -372,7 +372,7 @@ export const subAdminCreate = async (
       department: selectedDepartment,
       profilePicture: null,
       employeeId,
-      desgination
+      designation
     });
     res.status(201).json({
       success: true,
@@ -384,7 +384,7 @@ export const subAdminCreate = async (
         userType: user.userType,
         department: selectedDepartment,
         employeeId:user.employeeId,
-        desgination:user.desgination
+        designation:user.designation
       },
     });
   } catch (error) {
@@ -571,7 +571,7 @@ export const getAllUser = async (
           profilePicture: 1,
           // orders: 1,
           orderCount: { $size: "$orders" },
-          desgination:1,
+          designation:1,
           userType:1
         },
       },
