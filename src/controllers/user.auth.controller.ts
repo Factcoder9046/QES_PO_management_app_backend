@@ -50,7 +50,7 @@ export const adminLogin = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, userType,employeeId,profilePicture } = req.body;
     // Validate input
     if (!email || !password) {
       throw new ErrorHandler(400, "Email and password are required");
@@ -58,28 +58,18 @@ export const adminLogin = async (
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      throw new ErrorHandler(400, "User not found");
+      throw new ErrorHandler(400, "user not founds");
     }
     // Validate password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log(isValidPassword, "invalidadd");
     if (!isValidPassword) {
       throw new ErrorHandler(400, "Invalid email or password");
     }
-
-    // Check login time for 'user' type
-    if (user.userType === 'user') {
-      const now = new Date();
-      const currentHour = now.getHours();
-      
-      // Define the allowed login hours (1 PM to 7 PM)
-      const allowedStartHour = 9; // 9 AM in 24-hour format
-      const allowedEndHour = 19;   // 7 PM in 24-hour format
-
-      if (currentHour < allowedStartHour || currentHour >= allowedEndHour) {
-        throw new ErrorHandler(403, "Access denied. 'user' login is only allowed between 1 PM and 7 PM.");
-      }
+    // Validate userType if provided
+    if (userType && userType !== user.userType) {
+      throw new ErrorHandler(400, "Invalid user type");
     }
-
     // Generate JWT
     const token = jwt.sign(
       { id: user._id, email, userType: user.userType },
