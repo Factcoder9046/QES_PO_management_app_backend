@@ -52,24 +52,15 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize WebSocket and pass both server and app
-export const { io, userSocketMap } = initializeWebSocket(server, app); // Pass app here
-
-const frontendDistPath = path.join(__dirname, "../../op-management-apps/dist");
-app.use(express.static(frontendDistPath));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
-
+// NOTE: Moved the CORS middleware to be one of the first things
+// the Express app uses to ensure it handles preflight requests correctly.
 const allowedOrigins = [
-  "http://localhost:4000",
-  "http://localhost:5173",
-  "http://13.233.137.149:4000",
-  "exp://o87i5p4-anonymous-8081.exp.direct",
-  "capacitor://localhost",
-  // This is the origin for your production Android app.
-  "android-app://com.visualeye.app"
+  "http://localhost:4000",
+  "http://localhost:5173",
+  "http://13.233.137.149:4000",
+  "exp://o87i5p4-anonymous-8081.exp.direct",
+  "capacitor://localhost",
+  "android-app://com.visualeye.app"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
@@ -82,18 +73,22 @@ if (process.env.CORS_ORIGIN) {
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      console.log(`Blocked by CORS - Origin: ${origin}`);
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// Initialize WebSocket and pass both server and app
+export const { io, userSocketMap } = initializeWebSocket(server, app); // Pass app here
+
+const frontendDistPath = path.join(__dirname, "../../op-management-apps/dist");
+app.use(express.static(frontendDistPath));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan("dev"));
 
 app.use("/order/api", orderRouter);
 app.use("/user/api", userRouter);
