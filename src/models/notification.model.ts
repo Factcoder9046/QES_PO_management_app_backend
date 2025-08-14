@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["order_create", "order_update", "order_delete", "permission_request", "permission_response"],
+       enum: ["order_create", "order_update", "order_delete", "permission_request", "permission_response","task_create"],
       required: true,
     },
     message: { type: String, required: true },
@@ -28,7 +28,7 @@ const notificationSchema = new mongoose.Schema(
     },
     referenceModel: {
       type: String,
-      enum: ["Order", "Permission", "PermissionRequest"],
+      enum: ["Order", "Permission", "PermissionRequest","Task"],
       required: false,
     },
   },

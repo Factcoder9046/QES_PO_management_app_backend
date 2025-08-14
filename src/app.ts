@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import orderRouter from "./routes/order.js";
 import { errorMiddleware } from "./middlewares/error.js";
 import userRouter from "./routes/auth.route.js";
+import taskRouter from './routes/task.route.js'
 // import notificationRouter from "./routes/notification.route.js";
 import http from "http";
 import { initializeWebSocket } from "./controllers/websocket.js";
@@ -93,6 +94,7 @@ app.use(
 
 app.use("/order/api", orderRouter);
 app.use("/user/api", userRouter);
+app.use("/task/api", taskRouter);
 // app.use("/notification/api", notificationRouter);
 
 // Serve index.html for SPA (Single Page Application) routing
