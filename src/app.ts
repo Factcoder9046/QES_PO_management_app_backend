@@ -62,15 +62,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-// NOTE: This is the updated section with the added origin.
 const allowedOrigins = [
   "http://localhost:4000",
   "http://localhost:5173",
   "http://13.233.137.149:4000",
   "exp://o87i5p4-anonymous-8081.exp.direct",
   "capacitor://localhost",
-  // The origin for your production app has been updated here.
-  "android-app://com.visualeye.in"
+  // This is the origin for your production Android app.
+  "android-app://com.visualeye.app"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
