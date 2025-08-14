@@ -13,25 +13,24 @@ console.log(userSocketMap, "userSocketMap initialized");
 export const initializeWebSocket = (server: HttpServer, app: Application) => {
   const io = new Server(server, {
     cors: {
-      origin:"*",
-      // origin: (origin, callback) => {
-      //   const allowedOrigins = [
-      //     "exp://o87i5p4-anonymous-8081.exp.direct",
-      //     "http://localhost:5173/",
-      //     "http://13.201.188.234:4000",
-      //   ];
-      //   if (process.env.CORS_ORIGIN) {
-      //     const envOrigins = process.env.CORS_ORIGIN.split(",").map((origin) =>
-      //       origin.trim().replace(/\/$/, "")
-      //     );
-      //     allowedOrigins.push(...envOrigins);
-      //   }
-      //   if (!origin || allowedOrigins.includes(origin)) {
-      //     callback(null, true);
-      //   } else {
-      //     callback(new Error("Not allowed by CORS"));
-      //   }
-      // },
+      origin: (origin, callback) => {
+        const allowedOrigins = [
+          "exp://o87i5p4-anonymous-8081.exp.direct",
+          "http://localhost:5173/",
+          "http://13.201.188.234:4000",
+        ];
+        if (process.env.CORS_ORIGIN) {
+          const envOrigins = process.env.CORS_ORIGIN.split(",").map((origin) =>
+            origin.trim().replace(/\/$/, "")
+          );
+          allowedOrigins.push(...envOrigins);
+        }
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       methods: ["GET", "POST"],
       credentials: true,
     },
