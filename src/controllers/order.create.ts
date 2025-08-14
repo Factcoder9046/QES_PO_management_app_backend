@@ -132,8 +132,6 @@ export const orderCreate = async (
       savedOrder._id.toString(),
       userId,
       io,
-      userSocketMap,
-      "create"
     );
 
     return res.status(201).json({
@@ -617,8 +615,6 @@ export const updateOrderDetailsById = async (
         updatedOrder._id.toString(),
         userId,
         io,
-        userSocketMap,
-        "update"
       );
     }
 
