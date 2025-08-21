@@ -60,7 +60,8 @@ const allowedOrigins = [
   "http://13.233.137.149:4000",
   "exp://o87i5p4-anonymous-8081.exp.direct",
   "capacitor://localhost",
-  "android-app://com.visualeye.app"
+  "android-app://com.visualeye.app",
+  "https://qes-po-management-app-frontend.vercel.app"
 ];
 
 // Add CORS_ORIGIN from environment variable if defined
