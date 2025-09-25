@@ -6,7 +6,7 @@ const orderSchema = new mongoose.Schema(
     invoiceNumber: { type: String, required: false },
     orderNumber: { type: String, required: true, unique: true },
     clientName: { type: String, required: true },
-    companyName: { type: String, required: false },
+    companyName: { type: String, required: true },
     gstNumber: { type: String, required: false },
     contact: { type: String, required: false },
     address: { type: String, required: false },

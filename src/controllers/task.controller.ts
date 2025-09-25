@@ -5,9 +5,13 @@ import User from "@/models/user.auth.model.js";
 import { createTaskNotification } from "./notificationService.js";
 import { CustomRequest } from "@/middlewares/check.permission.middleware.js";
 import Task from "@/models/task.model.js";
+import { TryCatch } from "@/middlewares/error.js";
+
+
 
 
 //// create a function to assign the task for the user
+
 
 // Create task endpoint
 // export const createTask = async (req: CustomRequest,res: Response) => {
@@ -47,6 +51,7 @@ import Task from "@/models/task.model.js";
 //       .lean()
 //       .populate("assignedUsers", "username email");
 
+
 //     return res.status(201).json({
 //       message: "Task created successfully",
 //       task: populatedTask,
@@ -58,6 +63,8 @@ import Task from "@/models/task.model.js";
 // };
 
 
+
+
 interface TaskRequestBody {
   poId: string;
   title: string;
@@ -67,8 +74,10 @@ interface TaskRequestBody {
   urgent?: boolean;
   status?: string;
 
+
   assignedUsers?: { _id: string; username: string }[];
 }
+
 
 export const createTask = async (req: CustomRequest, res: Response) => {
   try {
@@ -82,9 +91,12 @@ export const createTask = async (req: CustomRequest, res: Response) => {
       urgent,
       poId,
 
+
     } = req.body as TaskRequestBody;
 
+
     console.log(req.body, "Received task data");
+
 
     // Validate assignedUsers if provided
     let userIds: string[] = [];
@@ -98,6 +110,7 @@ export const createTask = async (req: CustomRequest, res: Response) => {
       }
     }
 
+
     // Create new task
     const newTask = new Task({
       title,
@@ -109,9 +122,12 @@ export const createTask = async (req: CustomRequest, res: Response) => {
       assignedUsers: userIds, // Store unique user IDs
       poId,
       assignedBy: req.user.id,
+      createdBy: req.user.id, //admin create task selected PO
     });
 
+
     const savedTask = await newTask.save();
+
 
     // Trigger notification
     const userId = req.user.id;
@@ -119,12 +135,14 @@ export const createTask = async (req: CustomRequest, res: Response) => {
     const io = req.app.get("io");
     await createTaskNotification(savedTask._id.toString(), userId, io, userSocketMap, "create");
 
+
     // Populate task for response
     const populatedTask = await Task.findById(savedTask._id)
       .lean()
       .populate("assignedUsers", "username email")
       .populate("poId", "orderNumber")
       .populate("assignedBy", "username email employeeId");
+
 
     return res.status(201).json({
       success: true,
@@ -145,6 +163,10 @@ export const createTask = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
+
+
+
 
 
 
@@ -175,15 +197,18 @@ export const assignTask = async (req: Request, res: Response) => {
   }
 };
 
+
 //// create api for update update status of the status
 export const updateStatusTask = async (req: CustomRequest, res: Response) => {
   try {
     const { taskId } = req.params;
     const { status } = req.body;
 
+
     if (!taskId) {
       return res.status(400).json({ success: false, message: "Invalid task ID" });
     }
+
 
     // 👇 अगर completed किया है तो completedBy set करो, वरना null
     const updatedTask = await Task.findByIdAndUpdate(
@@ -195,9 +220,11 @@ export const updateStatusTask = async (req: CustomRequest, res: Response) => {
       { new: true, runValidators: true }
     );
 
+
     if (!updatedTask) {
       return res.status(404).json({ success: false, message: "Task not found" });
     }
+
 
     return res.status(200).json({
       success: true,
@@ -213,17 +240,27 @@ export const updateStatusTask = async (req: CustomRequest, res: Response) => {
 
 
 
+
+
 export const getTasksByPO = async (req: Request, res: Response) => {
   try {
     const { poId } = req.params;
-    console.log(poId, "check POid");
+
+
     if (!poId) {
       throw new ErrorHandler(400, "Invalid purchase order ID");
     }
-    const tasks = await Task.find({ poId: poId }) // Query by poId field, not _id
+
+
+    const tasks = await Task.find({
+        poId: poId,
+        createdBy: req.user.id   // ✅ only tasks created by logged-in admin
+      })
       .populate("assignedUsers", "username email")
       .populate("assignedBy", "username email employeeId")
       .lean();
+
+
     return res.status(200).json({
       success: true,
       message: "Tasks retrieved successfully",
@@ -241,16 +278,19 @@ export const getTasksByPO = async (req: Request, res: Response) => {
   }
 };
 
+
 // Get tasks assigned to a specific user
 export const getTasksByUser = async (req, res) => {
   try {
     const { userId } = req.params;
+
 
     // Find tasks where userId exists in assignedUsers
     const tasks = await Task.find({ assignedUsers: userId })
       .populate("assignedUsers", "username email") // Sirf zaroori fields
       .populate("poId", "orderNumber")
       .populate("assignedBy", "username email employeeId");
+
 
     return res.status(200).json({
       success: true,
@@ -265,3 +305,50 @@ export const getTasksByUser = async (req, res) => {
     });
   }
 };
+
+
+
+
+export const updateUserTaskStatus = TryCatch(async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { status } = req.body;
+
+
+    // task dhundo
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+
+    // user ke liye alag status store karo
+    task.userStatus = status;
+
+
+    // agar user ne complete kiya hai to markStatus true
+    task.markStatus = status === "completed";
+
+
+    await task.save();
+
+
+    return res.status(200).json({
+      success: true,
+      task,
+      message: "User task status updated successfully",
+    });
+  } catch (error) {
+    console.error("❌ updateUserTaskStatus error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
+
+
+
+
+
+
+
+
+
