@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-    orderDate:{type:Date,required:false}, 
-    invoiceNumber:{type:String,required:false},
+    orderDate: { type: Date, required: false },
+    invoiceNumber: { type: String, required: false },
     orderNumber: { type: String, required: true, unique: true },
     clientName: { type: String, required: true },
-    companyName: { type: String,required: false },
-    gstNumber: { type: String,required: false },
+    companyName: { type: String, required: false },
+    gstNumber: { type: String, required: false },
     contact: { type: String, required: false },
     address: { type: String, required: false },
     zipCode: { type: String, required: false },
@@ -19,43 +19,36 @@ const orderSchema = new mongoose.Schema(
         remark: { type: String, required: false },
       },
     ],
-    estimatedDispatchDate: { type: Date, required:false },
+    estimatedDispatchDate: { type: Date, required: false },
     generatedBy: {
-      username:{type:String,required:false},
+      username: { type: String, required: false },
       employeeId: { type: String, required: false },
-       userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: false,
-      },
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
     },
-
     orderThrough: {
-    type: new mongoose.Schema(
-      {
-        username: { type: String, required: false },
-        employeeId: { type: String, required: false }
-      },
-      { _id: false }
-    ),
-    required: false
-  },
+      type: new mongoose.Schema(
+        {
+          username: { type: String, required: false },
+          employeeId: { type: String, required: false },
+          orderVia: [{ type: String, required: false }], // Array of strings
+        },
+        { _id: false }
+      ),
+      required: false,
+    },
     status: {
       type: String,
       enum: ["pending", "processing", "completed", "delayed", "rejected"],
       default: "pending",
     },
     assignedToUser: {
-      userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: false,
-      },
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
       department: {
-        type: String,
-        enum: ["sales", "production", "Accounts", "R&D"],
+        type: [String],
+        enum: ["R&D", "Production", "Accounts"],
         required: false,
       },
+      
     },
     isdeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
@@ -64,7 +57,3 @@ const orderSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("Order", orderSchema);
-
-
-
-

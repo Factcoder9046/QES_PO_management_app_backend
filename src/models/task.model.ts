@@ -3,31 +3,32 @@ import mongoose from "mongoose";
 const taskSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true, 
+    required: true,
   },
   description: {
     type: String,
-    required: true, 
+    required: true,
   },
   status: {
     type: String,
-    enum: ["completed", "pending", "canceled"], 
+    enum: ["completed", "pending", "canceled"],
     default: "pending",
   },
-  markStatus:{
-    type:Boolean,
-    default:false
+  markStatus: {
+    type: Boolean,
+    default: false
   },
   taskType: {
     type: String,
     enum: ["installation", "maintenance", "calibration", "repair", "inspection"],
-    required: true, 
+    required: true,
   },
+
   assignedUsers: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Changed to array for multiple users
     required: false,
   },
-   poId: {
+  poId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Order",
     required: true,
@@ -36,6 +37,19 @@ const taskSchema = new mongoose.Schema({
     type: Date,
     required: false, // Optional deadline; set to true if mandatory
   },
+  urgent: {
+    type: Boolean,
+    default: false,
+  },
+
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
 });
 
 // Add indexes for faster queries

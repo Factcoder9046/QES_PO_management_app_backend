@@ -7,11 +7,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { approvePermissionRequest, authenticateUser, requirePermissionForResource, restrictTo } from "@/middlewares/check.permission.middleware.js";
 
+
+
 // Derive __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to frontend's public/images directory
+//Path to frontend's public images directory 
+
 const FRONTEND_IMAGES_PATH = path.join(__dirname, "../../../op-management-apps/public/images");
 
 const storage = multer.diskStorage({
@@ -65,6 +68,10 @@ userRouter.route("/admin-check-permission").post(adminVerify,restrictTo(["admin"
 //// route for subadmin
 userRouter.route("/admin-create-subadmin").post(adminVerify,upload.single("profilePicture"), subAdminCreate )
 userRouter.route("/subadmin-login").post(TryCatch(subAdminLogin));
+
+
+
+
 
 
 

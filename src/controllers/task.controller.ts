@@ -2,7 +2,7 @@
 import ErrorHandler from "../utils/errorHandler.js";
 import { Request, Response } from "express";
 import User from "@/models/user.auth.model.js";
-import {createTaskNotification } from "./notificationService.js";
+import { createTaskNotification } from "./notificationService.js";
 import { CustomRequest } from "@/middlewares/check.permission.middleware.js";
 import Task from "@/models/task.model.js";
 
@@ -64,7 +64,9 @@ interface TaskRequestBody {
   description: string;
   taskType: string;
   taskDeadline?: string;
+  urgent?: boolean;
   status?: string;
+
   assignedUsers?: { _id: string; username: string }[];
 }
 
@@ -77,7 +79,9 @@ export const createTask = async (req: CustomRequest, res: Response) => {
       status,
       taskDeadline,
       assignedUsers,
+      urgent,
       poId,
+
     } = req.body as TaskRequestBody;
 
     console.log(req.body, "Received task data");
@@ -99,10 +103,12 @@ export const createTask = async (req: CustomRequest, res: Response) => {
       title,
       description,
       taskType,
+      urgent,
       status: status || "pending",
       taskDeadline: taskDeadline ? new Date(taskDeadline) : null,
       assignedUsers: userIds, // Store unique user IDs
       poId,
+      assignedBy: req.user.id,
     });
 
     const savedTask = await newTask.save();
@@ -117,7 +123,8 @@ export const createTask = async (req: CustomRequest, res: Response) => {
     const populatedTask = await Task.findById(savedTask._id)
       .lean()
       .populate("assignedUsers", "username email")
-      .populate("poId", "orderNumber");
+      .populate("poId", "orderNumber")
+      .populate("assignedBy", "username email employeeId");
 
     return res.status(201).json({
       success: true,
@@ -169,29 +176,27 @@ export const assignTask = async (req: Request, res: Response) => {
 };
 
 //// create api for update update status of the status
-export const updateStatusTask = async (req: Request, res: Response) => {
+export const updateStatusTask = async (req: CustomRequest, res: Response) => {
   try {
     const { taskId } = req.params;
-    const { markStatus } = req.body;
-    console.log('status task ',markStatus)
-    console.log(taskId,"jjdhdh  taskId")
+    const { status } = req.body;
 
-    // Validate taskId
-    if (!taskId || !taskId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid task ID",
-      });
+    if (!taskId) {
+      return res.status(400).json({ success: false, message: "Invalid task ID" });
     }
-    // Find and update the task
+
+    // 👇 अगर completed किया है तो completedBy set करो, वरना null
     const updatedTask = await Task.findByIdAndUpdate(
       taskId,
-      { markStatus },
-      { new: true, runValidators: true } // Return updated document and validate
+      {
+        status,
+        completedBy: status === "completed" ? req.user._id : null,
+      },
+      { new: true, runValidators: true }
     );
 
     if (!updatedTask) {
-       throw new ErrorHandler(500, "task not found");
+      return res.status(404).json({ success: false, message: "Task not found" });
     }
 
     return res.status(200).json({
@@ -199,12 +204,13 @@ export const updateStatusTask = async (req: Request, res: Response) => {
       message: "Task status updated successfully",
       data: updatedTask,
     });
-
   } catch (error) {
     console.error("Error updating task status:", error);
-    throw new ErrorHandler(500, "Internal server error");;
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+
 
 
 export const getTasksByPO = async (req: Request, res: Response) => {
@@ -216,6 +222,7 @@ export const getTasksByPO = async (req: Request, res: Response) => {
     }
     const tasks = await Task.find({ poId: poId }) // Query by poId field, not _id
       .populate("assignedUsers", "username email")
+      .populate("assignedBy", "username email employeeId")
       .lean();
     return res.status(200).json({
       success: true,
@@ -231,5 +238,30 @@ export const getTasksByPO = async (req: Request, res: Response) => {
       });
     }
     throw new ErrorHandler(500, "Internal server error");
+  }
+};
+
+// Get tasks assigned to a specific user
+export const getTasksByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find tasks where userId exists in assignedUsers
+    const tasks = await Task.find({ assignedUsers: userId })
+      .populate("assignedUsers", "username email") // Sirf zaroori fields
+      .populate("poId", "orderNumber")
+      .populate("assignedBy", "username email employeeId");
+
+    return res.status(200).json({
+      success: true,
+      message: "Tasks retrieved successfully",
+      data: tasks,
+    });
+  } catch (error) {
+    console.error("Error fetching tasks by user:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };

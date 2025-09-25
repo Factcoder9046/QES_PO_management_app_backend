@@ -4,9 +4,12 @@ import Order from "../models/order.model.js";
 import mongoose, { Types } from "mongoose";
 import { FilterQuery } from "mongoose";
 import ErrorHandler from "../utils/errorHandler.js";
-// import User from "../models/user.auth.model";
 import { createOrderNotification } from "./notificationService.js";
 import { CustomRequest } from "../middlewares/check.permission.middleware.js";
+import { getOrderStatus } from "@/utils/getOrderStatus.js";
+
+
+
 
 // Function to generate orderNumber in format "01/QESPL/JUN/25"
 export const createOrderNumber = async (
@@ -53,8 +56,9 @@ export const orderCreate = async (
       estimatedDispatchDate,
       generatedBy,
       orderThrough,
-      orderDate, // <-- ADDED THIS LINE
-      invoiceNumber, // <-- ADDED THIS LINE (assuming it's also missing based on frontend)
+      orderDate,
+      invoiceNumber,
+      department, //  add department from body
     } = req.body;
 
     if (
@@ -63,12 +67,30 @@ export const orderCreate = async (
       !req.user ||
       !req.user.id ||
       !req.user.username ||
-      !orderDate // <-- ADDED THIS VALIDATION
+      !orderDate ||
+      !department //  department required
     ) {
       throw new ErrorHandler(400, "Missing or invalid required fields");
     }
 
-    // Validate products array
+
+    // validate department
+    const allowedDepartments = ["R&D", "Production", "Accounts"];
+
+    if (!Array.isArray(department) || department.length === 0) {
+      throw new ErrorHandler(400, "Department must be a non-empty array");
+    }
+
+    for (const dep of department) {
+      if (!allowedDepartments.includes(dep)) {
+        throw new ErrorHandler(
+          400,
+          `Invalid department: ${dep}. Allowed: R&D, Productions, Accounts`
+        );
+      }
+    }
+
+    // Validate products
     if (!Array.isArray(products) || products.length === 0) {
       throw new ErrorHandler(
         400,
@@ -91,11 +113,14 @@ export const orderCreate = async (
       }
     }
 
+
     // Generate order number if not provided
     const userId = req.user.id;
     const orderNumber = providedOrderNumber || (await createOrderNumber());
 
-    // Create and save the order
+
+    const status = getOrderStatus(estimatedDispatchDate);
+
     const newOrder = new Order({
       orderNumber,
       clientName,
@@ -109,30 +134,34 @@ export const orderCreate = async (
       generatedBy: {
         username: generatedBy.username,
         employeeId: generatedBy.employeeId,
-        userId: userId, // From authenticated user
+        userId: userId,
       },
       orderThrough: {
         username: orderThrough.username,
-        employeeId: orderThrough.employeeId, // From request body
+        employeeId: orderThrough.employeeId,
+        orderVia: orderThrough.orderVia.map(v => v.trim()) // Ensure array
       },
-      orderDate, // <-- ADDED THIS LINE
-      invoiceNumber, // <-- ADDED THIS LINE
-      status: "pending", // Assuming these defaults are applied on backend
-      department: "default",
+      orderDate,
+      invoiceNumber,
+      status,
+      assignedToUser: {
+        userId: req.body.assignedToUserId || null, // optional
+        department: department, // ✅ correct place
+      },
       isdeleted: false,
       deletedAt: null,
     });
-
     const savedOrder = await newOrder.save();
 
-    // Notification logic
-    const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
     const io = req.app.get("io");
-    await createOrderNotification(
-      savedOrder._id.toString(),
-      userId,
-      io,
-    );
+    await createOrderNotification(savedOrder._id.toString(), req.user.id, io);
+
+    //  const userSocketMap: Map<string, string> = req.app.get("userSocketMap");
+    //  const io = req.app.get("io");
+    // await createOrderNotification(savedOrder._id.toString(), userId, io);
+
+
+
 
     return res.status(201).json({
       success: true,
@@ -140,7 +169,6 @@ export const orderCreate = async (
       data: savedOrder,
     });
   } catch (error) {
-    // Handle MongoDB duplicate key error
     if (error.code === 11000 && error.keyPattern?.orderNumber) {
       return next(
         new ErrorHandler(
@@ -152,6 +180,7 @@ export const orderCreate = async (
     next(error);
   }
 };
+
 
 
 export const getOrderDetailsById = async (
@@ -342,8 +371,13 @@ export const getAllOrders = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = 10;
+    const getAll = req.query.getAll === "true";
+    const limit = getAll
+      ? 0
+      : parseInt(req.query.limit as string) || 10;
+
     const status = (req.query.status as string) || "all";
+    const orderVia = (req.query.orderVia as string) || "all";
     const search = (req.query.search as string) || "";
     const fromDate = (req.query.fromDate as string) || "";
     const toDate = (req.query.toDate as string) || "";
@@ -354,12 +388,17 @@ export const getAllOrders = async (
 
     const query: any = { isdeleted: false };
 
-    // Add status filter if not 'all'
+    // Status filter
     if (status !== "all") {
       query.status = status;
     }
 
-    // Add search query for multiple fields
+    // Order Via filter
+    if (orderVia !== "all") {
+      query["orderThrough.orderVia"] = orderVia;
+    }
+
+    // Search filter
     if (search) {
       query.$or = [
         { orderNumber: { $regex: search, $options: "i" } },
@@ -371,7 +410,93 @@ export const getAllOrders = async (
       ];
     }
 
-    // Add date range filters
+    // Date range filter
+    if (fromDate || toDate) {
+      query.createdAt = {};
+      if (fromDate) query.createdAt.$gte = new Date(fromDate);
+      if (toDate) {
+        const endOfDay = new Date(toDate);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+        query.createdAt.$lte = endOfDay;
+      }
+    }
+
+    // Count total matching orders
+    const totalOrders = await Order.countDocuments(query);
+    const totalPages = limit > 0 ? Math.ceil(totalOrders / limit) : 1;
+
+    if (!getAll && page > totalPages && totalOrders > 0) {
+      throw new ErrorHandler(
+        400,
+        `Page ${page} exceeds total pages (${totalPages})`
+      );
+    }
+
+    const skip = !getAll ? (page - 1) * limit : 0;
+
+    const orders = await Order.find(query)
+    
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .populate("generatedBy", "username employeeId");
+
+    return res.status(200).json({
+      success: true,
+      message: "Orders retrieved successfully",
+      data: {
+        orders,
+        pagination: getAll
+          ? null
+          : {
+            currentPage: page,
+            totalPages,
+            totalOrders,
+            limit,
+          },
+      },
+    });
+  } catch (error: unknown) {
+    next(error as Error);
+  }
+};
+
+export const nonApprovalPOs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = 10;
+    const search = (req.query.search as string) || "";
+    const fromDate = (req.query.fromDate as string) || "";
+    const toDate = (req.query.toDate as string) || "";
+
+    if (page < 1) {
+      throw new ErrorHandler(400, "Page number must be a positive integer");
+    }
+
+    // The primary query is to find documents that are not deleted
+    // and have a status of either 'pending' or 'delayed'.
+    const query: any = {
+      isdeleted: false,
+      status: { $in: ["pending", "delayed"] }
+    };
+
+    // Add search query for multiple fields if a search term is provided
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: "i" } },
+        { clientName: { $regex: search, $options: "i" } },
+        { companyName: { $regex: search, $options: "i" } },
+        { "generatedBy.username": { $regex: search, $options: "i" } },
+        { "generatedBy.employeeId": { $regex: search, $options: "i" } },
+        { "products.name": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Add date range filters if fromDate or toDate are provided
     if (fromDate || toDate) {
       query.createdAt = {};
       if (fromDate) {
@@ -385,9 +510,11 @@ export const getAllOrders = async (
       }
     }
 
+    // Count the total number of orders that match the query
     const totalOrders = await Order.countDocuments(query);
     const totalPages = Math.ceil(totalOrders / limit);
 
+    // Handle invalid page numbers if they exceed the total pages
     if (page > totalPages && totalOrders > 0) {
       throw new ErrorHandler(
         400,
@@ -397,15 +524,17 @@ export const getAllOrders = async (
 
     const skip = (page - 1) * limit;
 
+    // Find the orders with pagination, sorting, and population
     const orders = await Order.find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
       .populate("generatedBy", "username");
 
+    // Send the response with the orders and pagination data
     return res.status(200).json({
       success: true,
-      message: "Orders retrieved successfully",
+      message: "Non-approval purchase orders retrieved successfully",
       data: {
         orders,
         pagination: {
@@ -419,95 +548,6 @@ export const getAllOrders = async (
   } catch (error: unknown) {
     next(error as Error);
   }
-};
-
-export const nonApprovalPOs = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = 10;
-    const search = (req.query.search as string) || "";
-    const fromDate = (req.query.fromDate as string) || "";
-    const toDate = (req.query.toDate as string) || "";
-
-    if (page < 1) {
-      throw new ErrorHandler(400, "Page number must be a positive integer");
-    }
-
-    // The primary query is to find documents that are not deleted
-    // and have a status of either 'pending' or 'delayed'.
-    const query: any = { 
-      isdeleted: false,
-      status: { $in: ["pending", "delayed"] }
-    };
-
-    // Add search query for multiple fields if a search term is provided
-    if (search) {
-      query.$or = [
-        { orderNumber: { $regex: search, $options: "i" } },
-        { clientName: { $regex: search, $options: "i" } },
-        { companyName: { $regex: search, $options: "i" } },
-        { "generatedBy.username": { $regex: search, $options: "i" } },
-        { "generatedBy.employeeId": { $regex: search, $options: "i" } },
-        { "products.name": { $regex: search, $options: "i" } },
-      ];
-    }
-
-    // Add date range filters if fromDate or toDate are provided
-    if (fromDate || toDate) {
-      query.createdAt = {};
-      if (fromDate) {
-        query.createdAt.$gte = new Date(fromDate);
-      }
-      if (toDate) {
-        // Add one day to the toDate to include the entire day
-        const endOfDay = new Date(toDate);
-        endOfDay.setDate(endOfDay.getDate() + 1);
-        query.createdAt.$lte = endOfDay;
-      }
-    }
-
-    // Count the total number of orders that match the query
-    const totalOrders = await Order.countDocuments(query);
-    const totalPages = Math.ceil(totalOrders / limit);
-
-    // Handle invalid page numbers if they exceed the total pages
-    if (page > totalPages && totalOrders > 0) {
-      throw new ErrorHandler(
-        400,
-        `Page ${page} exceeds total pages (${totalPages})`
-      );
-    }
-
-    const skip = (page - 1) * limit;
-
-    // Find the orders with pagination, sorting, and population
-    const orders = await Order.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .populate("generatedBy", "username");
-
-    // Send the response with the orders and pagination data
-    return res.status(200).json({
-      success: true,
-      message: "Non-approval purchase orders retrieved successfully",
-      data: {
-        orders,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalOrders,
-          limit,
-        },
-      },
-    });
-  } catch (error: unknown) {
-    next(error as Error);
-  }
 };
 
 
@@ -589,13 +629,30 @@ export const updateOrderDetailsById = async (
     };
 
     // Include optional fields if provided
-    if(orderDate) updateData.orderDate = orderDate;
+    // if(orderDate) updateData.orderDate = orderDate;
     if (clientName) updateData.clientName = clientName;
     if (contact) updateData.contact = contact;
     if (address) updateData.address = address;
     if (zipCode) updateData.zipCode = zipCode;
-    if (estimatedDispatchDate) updateData.estimatedDispatchDate = estimatedDispatchDate;
-    if (status) updateData.status = status;
+    // if (estimatedDispatchDate) updateData.estimatedDispatchDate = estimatedDispatchDate;
+    // if (status) updateData.status = status;
+
+    // const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
+    //   new: true,
+    //   runValidators: true,
+    // });
+
+    // if (!updatedOrder) {
+    //   throw new ErrorHandler(404, "Order not found");
+    // }
+
+    if (estimatedDispatchDate) {
+      updateData.estimatedDispatchDate = estimatedDispatchDate;
+      updateData.status = getOrderStatus(new Date(estimatedDispatchDate));
+    }
+    if(status){
+      updateData.status = status;
+    }
 
     const updatedOrder = await Order.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -617,6 +674,9 @@ export const updateOrderDetailsById = async (
         io,
       );
     }
+
+
+
 
     // Return the updated order
     return res.status(200).json({
@@ -699,7 +759,7 @@ export const deleteOrder = async (req: CustomRequest, res: Response) => {
     }
     if (!isSoftdelete && !permanent) {
       order.isdeleted = true;
-      order.status="rejected";
+      order.status = "rejected";
       order.deletedAt = new Date();
       await order.save();
       return res.status(200).json({
@@ -967,6 +1027,39 @@ export const getOrdersByUser = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
+
+
+export const getAllDepartmentsOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await Order.aggregate([
+      {
+        $unwind: "$department", // department array ko flatten karo
+      },
+      {
+        $group: {
+          _id: "$department",   // department ke basis pe group karo
+          count: { $sum: 1 },   // count nikalo
+        },
+      },
+    ]);
+
+    // Result ko format karo
+    const departmentCounts = {
+      RnD: result.find(r => r._id === "R&D")?.count || 0,
+      Production: result.find(r => r._id === "Production")?.count || 0,
+      Accounts: result.find(r => r._id === "Accounts")?.count || 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      departmentCounts,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 
 

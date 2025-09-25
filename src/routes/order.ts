@@ -10,7 +10,9 @@ import {
   getRecycleBinOrders,
   deleteOrderPermanently,
   getOrdersByUser,
-  nonApprovalPOs
+  nonApprovalPOs,
+  getAllDepartmentsOrders,
+  
 } from "../controllers/order.create.js";
 import { TryCatch } from "../middlewares/error.js";
 import {authenticateUser, requirePermission, restrictTo,restrictToVerifiedUser} from "../middlewares/check.permission.middleware.js"
@@ -53,6 +55,9 @@ router.route("/user-get-po-login-user/").get(authenticateUser, TryCatch(getOrder
 
 
 router.route("/user-recycle-bin-order/").get(authenticateUser,TryCatch(getRecycleBinOrders));
+
+// Department orders route
+router.route("/departments").get(authenticateUser, restrictTo(["admin","subadmin"]), TryCatch(getAllDepartmentsOrders));
 
 
 

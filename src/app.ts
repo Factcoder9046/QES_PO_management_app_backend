@@ -11,6 +11,10 @@ import { initializeWebSocket } from "./controllers/websocket.js";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import mongoose from "mongoose";
+import { startAutoStatusUpdateJob } from "./jobs/autoStatusUpdate.js";
+
+
+
 
 // Resolve __filename and __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +37,7 @@ const connectDB = () =>
     .connect(mongoURI)
     .then((c) => {
       console.log(`Connected to MongoDB with database: ${c.connection.name}`);
+      startAutoStatusUpdateJob(); // Start the auto status update job
     })
     .catch((e) => {
       console.error("MongoDB connection error:", e);
@@ -92,10 +97,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+
+
+
 app.use("/order/api", orderRouter);
 app.use("/user/api", userRouter);
 app.use("/task/api", taskRouter);
-// app.use("/notification/api", notificationRouter);
+
 
 // Serve index.html for SPA (Single Page Application) routing
 app.get("*", (req, res) => {
@@ -114,5 +122,5 @@ app.get("*", (req, res) => {
 app.use(errorMiddleware);
 
 server.listen(port, () =>
-  console.log(`Server is working on Port: ${port} in  Mode.`)
+  console.log(`Server is working on Port: ${port} in Mode.`)
 );
