@@ -75,6 +75,7 @@ export const adminVerify = async (
       );
     }
     req.user = {
+      _id: user._id,
       id: user._id.toString(),
       userType: user.userType,
       username: user.username,

@@ -242,7 +242,7 @@ export const updateStatusTask = async (req: CustomRequest, res: Response) => {
 
 
 
-export const getTasksByPO = async (req: Request, res: Response) => {
+export const getTasksByPO = async (req: CustomRequest, res: Response) => {
   try {
     const { poId } = req.params;
 
@@ -254,7 +254,7 @@ export const getTasksByPO = async (req: Request, res: Response) => {
 
     const tasks = await Task.find({
         poId: poId,
-        createdBy: req.user.id   // ✅ only tasks created by logged-in admin
+        createdBy: req.user.id
       })
       .populate("assignedUsers", "username email")
       .populate("assignedBy", "username email employeeId")

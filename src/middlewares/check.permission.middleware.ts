@@ -21,6 +21,7 @@ config(); // Load environment variables from .env file
 // Extend Express Request interface to include the 'user' property
 export  interface CustomRequest extends Request {
   user?: {
+    _id: unknown;
     id: string;
     userType: string;
     username: string; // Added username for consistency
@@ -118,6 +119,7 @@ export const requirePermission = (resource: string, action: string) => {
 
       // Attach user and permissions data to the request object for subsequent middlewares/controllers
       req.user = {
+        _id: user._id, // Add _id property as required
         id: user._id.toString(), // Convert ObjectId to string
         userType: user.userType,
         username: user.username,
@@ -240,6 +242,7 @@ export const authenticateUser = async (
 
     // Attach user data to the request object
     req.user = {
+      _id: user._id, // Add _id property as required
       id: user._id.toString(),
       userType: user.userType,
       username: user.username, // Ensure username is attached
